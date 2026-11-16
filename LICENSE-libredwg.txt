@@ -1,0 +1,5 @@
+DWG 讀取元件來自 LibreDWG（GNU 專案）與 @mlightcad/libredwg-web 0.8.1，授權為 GNU GPL 第 3 版。
+https://www.gnu.org/software/libredwg/
+https://github.com/mlightcad/libredwg-web
+https://www.gnu.org/licenses/gpl-3.0.html
+本檔中的 dwg.wasm 僅修改了起始記憶體大小（1 GB → 256 MB）。

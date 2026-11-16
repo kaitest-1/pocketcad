@@ -1,0 +1,1837 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8">
+<title>掌上製圖</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1d242a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="apple-mobile-web-app-title" content="掌上製圖">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no"><link rel="stylesheet" href="fonts.css">
+<style>
+/* 版面：上方檔案列／全幅製圖畫布／下方「指令列＋狀態列＋工具列」集中在拇指可及區 */
+:root{
+  --ui:#e4e9ec; --ui-2:#d6dde2; --panel:#f3f6f7; --rule:#c3ccd3;
+  --text:#1b2731; --muted:#5a6873; --accent:#c4661a; --accent-ink:#ffffff;
+  --c-canvas:#f9fafa; --c-ink:#1a242d; --c-grid:#e8edf0; --c-grid2:#d5dde3;
+  --c-accent:#d06d1f; --c-snap:#0b8796; --c-sel:#2c63d1; --c-x:#c84a4a; --c-y:#3a9152;
+  --f-ui:"Barlow Semi Condensed","Noto Sans TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;
+  --f-num:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --gutter-l:max(12px,env(safe-area-inset-left,0px)); --gutter-r:max(12px,env(safe-area-inset-right,0px));
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --ui:#1d242a; --ui-2:#2a333b; --panel:#222a31; --rule:#36414a;
+  --text:#e2e8ec; --muted:#93a0aa; --accent:#ee9b47; --accent-ink:#1d1206;
+  --c-canvas:#141a1f; --c-ink:#e4eaee; --c-grid:#1c2329; --c-grid2:#273039;
+  --c-accent:#f0a24f; --c-snap:#40cbd8; --c-sel:#6f9fff; --c-x:#e06666; --c-y:#5cbf75; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --ui:#1d242a; --ui-2:#2a333b; --panel:#222a31; --rule:#36414a;
+  --text:#e2e8ec; --muted:#93a0aa; --accent:#ee9b47; --accent-ink:#1d1206;
+  --c-canvas:#141a1f; --c-ink:#e4eaee; --c-grid:#1c2329; --c-grid2:#273039;
+  --c-accent:#f0a24f; --c-snap:#40cbd8; --c-sel:#6f9fff; --c-x:#e06666; --c-y:#5cbf75; color-scheme:dark}
+
+html{box-sizing:border-box;height:100%;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{height:100%;margin:0;overflow:hidden;background:var(--ui);color:var(--text);font-family:var(--f-ui);font-size:15px;
+  -webkit-tap-highlight-color:transparent;overscroll-behavior:none;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#app{height:100%;display:flex;flex-direction:column}
+
+/* 上方列 */
+.top{display:flex;align-items:center;gap:4px;padding-block:6px;padding-left:var(--gutter-l);padding-right:var(--gutter-r);border-bottom:1px solid var(--rule)}
+.brand{display:flex;align-items:baseline;gap:6px;margin-right:auto;min-width:0}
+.brand b{font-weight:700;font-size:18px;letter-spacing:.02em;white-space:nowrap}
+.brand small{font-family:var(--f-num);font-size:11px;color:var(--muted);border:1px solid var(--rule);border-radius:4px;padding:0 4px}
+.ib{height:40px;min-width:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:8px;background:transparent;padding:0 8px}
+.ib:active{background:var(--ui-2)}
+.ib svg{width:22px;height:22px}
+.ib[disabled]{opacity:.35}
+.layerbtn{border:1px solid var(--rule);max-width:42vw}
+.layerbtn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sw{width:12px;height:12px;border-radius:3px;flex:0 0 auto;border:1px solid var(--rule)}
+
+/* 畫布 */
+.stage{position:relative;flex:1;min-height:0;background:var(--c-canvas);overflow:hidden}
+#cv{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair;-webkit-touch-callout:none}
+.hud{position:absolute;top:8px;left:var(--gutter-l);right:var(--gutter-r);pointer-events:none;display:flex}
+.prompt{background:var(--panel);background:color-mix(in srgb,var(--panel) 88%,transparent);border:1px solid var(--rule);border-radius:8px;padding:6px 10px;font-size:14px;line-height:1.3;max-width:100%}
+.prompt b{color:var(--accent);font-weight:700;margin-right:6px}
+.xrow{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--rule)}
+.xinfo{display:flex;flex-direction:column;gap:2px;min-width:0}
+.xinfo b{font-size:15px;overflow-wrap:anywhere}
+.xinfo small{font-family:var(--f-num);font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.xst{font-size:13px;color:var(--muted)}
+.xst.ok{color:var(--c-y)}
+.xst.miss{color:var(--accent)}
+.xrow button{height:38px;padding:0 12px;border-radius:8px;border:1px solid var(--rule);background:var(--ui);font-weight:600}
+.zoombar{position:absolute;right:var(--gutter-r);top:76px;display:flex;flex-direction:column;gap:6px;z-index:1}
+.zoombar button{width:42px;height:42px;border-radius:12px;border:1px solid var(--rule);background:var(--panel);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgb(0 0 0 / .12)}
+.zoombar button svg{width:22px;height:22px}
+.zoombar button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.zoombar button[disabled]{opacity:.35}
+.ctx{position:absolute;right:var(--gutter-r);bottom:10px;left:var(--gutter-l);display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;pointer-events:none}
+.ctx button{pointer-events:auto;height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--rule);background:var(--panel);font-weight:600;box-shadow:0 2px 8px rgb(0 0 0 / .12)}
+.ctx button.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.toast{position:absolute;left:50%;top:56px;transform:translateX(-50%);background:var(--text);color:var(--panel);padding:8px 14px;border-radius:8px;font-size:14px;max-width:calc(100% - 32px);pointer-events:none;opacity:0;transition:opacity .2s}
+.toast.on{opacity:1}
+
+/* 指令列 */
+.cmd{display:flex;gap:6px;align-items:center;padding-block:6px;padding-left:var(--gutter-l);padding-right:var(--gutter-r);border-top:1px solid var(--rule)}
+.cmd label{font-family:var(--f-num);font-size:12px;color:var(--muted)}
+#cmdIn{flex:1;min-width:0;height:40px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);padding:0 10px;font-family:var(--f-num);font-size:15px;-webkit-user-select:text;user-select:text}
+.go{height:40px;padding:0 14px;border-radius:8px;border:0;background:var(--text);color:var(--panel);font-weight:600}
+
+/* 狀態列 */
+.status{display:flex;align-items:center;gap:6px;padding-block:2px 6px;padding-left:var(--gutter-l);padding-right:var(--gutter-r);overflow-x:auto;scrollbar-width:none}
+.status::-webkit-scrollbar{display:none}
+.coord{font-family:var(--f-num);font-size:12px;font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap;margin-right:auto;padding-right:8px}
+.chip{flex:0 0 auto;height:30px;padding:0 10px;border-radius:15px;border:1px solid var(--rule);background:transparent;font-size:13px;font-weight:600;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--ui-2);color:var(--text);border-color:var(--text)}
+
+/* 工具列 */
+.tools{display:flex;gap:2px;overflow-x:auto;padding-block:4px 6px;padding-left:var(--gutter-l);padding-right:var(--gutter-r);border-top:1px solid var(--rule);scrollbar-width:none}
+.tools::-webkit-scrollbar{display:none}
+.tool{flex:0 0 auto;width:58px;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:0;border-radius:10px;background:transparent;font-size:12px;font-weight:600}
+.tool svg{width:22px;height:22px}
+.tool[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.tsep{flex:0 0 1px;background:var(--rule);margin:8px 4px}
+
+svg.i{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* 底部面板 */
+dialog{border:0;padding:0;background:var(--panel);color:var(--text);border-radius:16px 16px 0 0;width:100%;max-width:560px;margin:auto auto 0;max-height:85%;box-shadow:0 -6px 30px rgb(0 0 0 / .25)}
+dialog::backdrop{background:rgb(10 14 18 / .45)}
+.sh{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px;position:sticky;top:0;background:var(--panel);z-index:1}
+.sh h2{margin:0;font-size:18px;font-weight:700}
+.sb{padding:0 16px 20px;padding-bottom:max(20px,env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px;-webkit-user-select:text;user-select:text}
+.sec{font-size:12px;letter-spacing:.08em;color:var(--muted);font-weight:700;margin-top:6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{height:46px;border-radius:10px;border:1px solid var(--rule);background:var(--ui);font-weight:600;padding:0 12px;display:flex;align-items:center;justify-content:center;gap:8px;text-align:center}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn.warn{color:var(--c-x)}
+.field{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.field input,.field select{height:40px;border:1px solid var(--rule);border-radius:8px;background:var(--ui);padding:0 10px;width:120px;font-family:var(--f-num)}
+.lrow{display:grid;grid-template-columns:28px 40px 1fr 44px 44px;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--rule)}
+.lrow input[type=radio]{width:22px;height:22px;accent-color:var(--accent)}
+.lrow input[type=color]{width:40px;height:34px;border:1px solid var(--rule);border-radius:6px;padding:2px;background:var(--ui)}
+.lrow input.ln{height:38px;border:1px solid var(--rule);border-radius:8px;background:var(--ui);padding:0 8px;min-width:0}
+.lrow .cnt{font-family:var(--f-num);font-size:11px;color:var(--muted)}
+.lrow button{height:38px;border-radius:8px;border:1px solid var(--rule);background:transparent}
+.lrow button svg{width:20px;height:20px}
+textarea{width:100%;height:200px;border:1px solid var(--rule);border-radius:8px;background:var(--ui);font-family:var(--f-num);font-size:11px;padding:8px;resize:vertical}
+.help{font-size:14px;line-height:1.55;color:var(--text)}
+.help table{border-collapse:collapse;width:100%}
+.help td{padding:4px 6px;border-bottom:1px solid var(--rule);vertical-align:top}
+.help td:first-child{font-family:var(--f-num);white-space:nowrap;color:var(--accent);font-size:13px}
+.note{font-size:13px;color:var(--muted);line-height:1.5}
+@media (prefers-reduced-motion: reduce){.toast{transition:none}}
+@media (min-width:900px){.tools{justify-content:center}}
+@media (max-width:420px){.brand small{display:none}.brand b{font-size:16px}.top{gap:0}.layerbtn{max-width:34vw}}
+</style>
+
+<div id="app">
+  <header class="top">
+    <div class="brand"><b>掌上製圖</b><small>mm</small></div>
+    <button class="ib" id="bUndo" title="復原 (Ctrl+Z)" aria-label="復原"><svg class="i" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+    <button class="ib" id="bRedo" title="重做 (Ctrl+Y)" aria-label="重做"><svg class="i" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
+    <button class="ib" id="bExt" title="縮放至全圖" aria-label="縮放至全圖"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><rect x="9" y="9" width="6" height="6"/></svg></button>
+    <button class="ib layerbtn" id="bLayer" title="圖層" aria-label="圖層"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg><i class="sw" id="lSw"></i><span id="lName">0</span></button>
+    <button class="ib" id="bMenu" title="檔案與設定" aria-label="檔案與設定"><svg class="i" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  </header>
+
+  <main class="stage" id="stage">
+    <canvas id="cv"></canvas>
+    <div class="hud"><div class="prompt" id="prompt"></div></div>
+    <div class="zoombar" role="toolbar" aria-label="視圖">
+      <button id="zIn" title="放大" aria-label="放大"><svg class="i" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21M8 10.5h5M10.5 8v5"/></svg></button>
+      <button id="zOut" title="縮小" aria-label="縮小"><svg class="i" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21M8 10.5h5"/></svg></button>
+      <button id="zWin" title="框選放大（ZW）" aria-label="框選放大"><svg class="i" viewBox="0 0 24 24"><path d="M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5" /><rect x="8" y="8" width="8" height="8" stroke-dasharray="2 2"/></svg></button>
+      <button id="zPrev" title="返回上一視圖（ZP）" aria-label="返回上一視圖"><svg class="i" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h9a7 7 0 0 1 0 14h-2"/><circle cx="14" cy="16" r="2.5"/></svg></button>
+    </div>
+    <div class="ctx" id="ctx"></div>
+    <div class="toast" id="toast" role="status"></div>
+  </main>
+
+  <div class="cmd">
+    <label for="cmdIn">指令</label>
+    <input id="cmdIn" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" placeholder="100,50 ・ @30<45 ・ L">
+    <button class="go" id="bGo">輸入</button>
+  </div>
+  <div class="status">
+    <span class="coord" id="coord">X 0  Y 0</span>
+    <button class="chip" id="cSnap" aria-pressed="true" title="物件鎖點 (F3)">鎖點</button>
+    <button class="chip" id="cGrid" aria-pressed="true" title="格點鎖點 (F9)">格點</button>
+    <button class="chip" id="cOrtho" aria-pressed="false" title="正交 (F8)">正交</button>
+    <button class="chip" id="cOff" aria-pressed="false" title="觸控時準星顯示在手指上方">偏移準星</button>
+  </div>
+  <nav class="tools" id="tools" aria-label="繪圖工具"></nav>
+</div>
+
+<dialog id="dLayers">
+  <div class="sh"><h2>圖層</h2><button class="ib" data-close aria-label="關閉"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="sb">
+    <div id="lList"></div>
+    <div class="grid2">
+      <button class="btn primary" id="lAdd">新增圖層</button>
+      <button class="btn" id="lMove">選取物件移到目前圖層</button>
+    </div>
+    <p class="note">圓點選擇目前圖層，新畫的物件會放在目前圖層。眼睛圖示可隱藏圖層；圖層上還有物件時不能刪除。</p>
+  </div>
+</dialog>
+
+<dialog id="dMenu">
+  <div class="sh"><h2>檔案與設定</h2><button class="ib" data-close aria-label="關閉"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="sb">
+    <div class="sec">檔案</div>
+    <div class="grid2">
+      <button class="btn" id="mDxf">匯出 DXF</button>
+      <button class="btn" id="mJson">匯出專案 JSON</button>
+      <label class="btn" for="mFile">匯入 DWG／DXF</label>
+      <button class="btn" id="mSample">載入範例圖面</button>
+      <button class="btn" id="mXref" style="grid-column:1/-1">外部參考</button>
+    </div>
+    <input type="file" id="mFile" accept=".dwg,.dxf,.json,.txt" hidden>
+    <button class="btn warn" id="mNew">清除並開新圖面</button>
+    <p class="note">圖面會自動儲存在這台裝置中。可匯入 DWG（R13 至 2018 版）、DXF 與專案 JSON；匯出的 DXF 為 R12 格式，AutoCAD、LibreCAD 等軟體都能開啟。DWG 讀取使用開源的 LibreDWG（GPL-3.0）。</p>
+
+    <div class="sec">設定</div>
+    <div class="field"><label for="sTextH">文字高度 (mm)</label><input id="sTextH" type="number" min="0.1" step="0.5" inputmode="decimal"></div>
+    <div class="field"><label for="sDec">尺寸小數位數</label><select id="sDec"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+
+    <div class="sec">操作說明</div>
+    <div class="help">
+      <table>
+        <tr><td>單指點</td><td>繪圖時放開手指即指定一點；按住拖曳可微調位置與鎖點</td></tr>
+        <tr><td>雙指</td><td>捏合縮放、拖曳平移（任何工具下皆可）</td></tr>
+        <tr><td>選取工具</td><td>點物件切換選取；點空白處兩次框選（由右往左為框交）；單指拖曳平移</td></tr>
+        <tr><td>100,50</td><td>絕對座標</td></tr>
+        <tr><td>@30,-20</td><td>相對上一點的座標</td></tr>
+        <tr><td>@80&lt;45</td><td>相對極座標：長度 80、角度 45°</td></tr>
+        <tr><td>50</td><td>沿準星方向的距離；畫圓時為半徑；旋轉時為角度；縮放時為比例</td></tr>
+        <tr><td>Enter／✓</td><td>結束目前指令（空白輸入亦同）</td></tr>
+        <tr><td>L PL REC C A</td><td>直線、聚合線、矩形、圓、圓弧</td></tr>
+        <tr><td>T DIM DI</td><td>文字、對齊標註、量測距離</td></tr>
+        <tr><td>M CO RO SC</td><td>移動、複製、旋轉、縮放</td></tr>
+        <tr><td>MI O E</td><td>鏡射、偏移、刪除</td></tr>
+        <tr><td>U REDO Z</td><td>復原、重做、縮放至全圖</td></tr>
+        <tr><td>ZW ZP</td><td>框選放大、返回上一視圖（畫面右側也有放大、縮小、框選、返回按鈕）</td></tr>
+        <tr><td>XR</td><td>外部參考：選取參考的 DWG／DXF 檔載入</td></tr>
+        <tr><td>F3 F8 F9</td><td>鍵盤：鎖點、正交、格點</td></tr>
+      </table>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dXref">
+  <div class="sh"><h2>外部參考</h2><button class="ib" data-close aria-label="關閉"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="sb">
+    <p class="note" id="xNote"></p>
+    <div id="xList"></div>
+    <div class="grid2">
+      <label class="btn primary" for="xFiles">選擇檔案（可多選）</label>
+      <label class="btn" for="xAttach">附加其他圖檔</label>
+    </div>
+    <input type="file" id="xFiles" accept=".dwg,.dxf" multiple hidden>
+    <input type="file" id="xOne" accept=".dwg,.dxf" hidden>
+    <input type="file" id="xAttach" accept=".dwg,.dxf" hidden>
+    <p class="note">手機無法依原本電腦上的路徑自動找檔，請把參考圖檔放到手機後在這裡選取。載入時會套用原圖的插入位置、比例與旋轉；參考圖裡若還有巢狀參考，會再列出來讓你載入。參考的圖層名稱為「參考名|圖層」，可在圖層面板中隱藏。</p>
+  </div>
+</dialog>
+
+<dialog id="dExport">
+  <div class="sh"><h2 id="eTitle">匯出</h2><button class="ib" data-close aria-label="關閉"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="sb">
+    <textarea id="eText" readonly></textarea>
+    <div class="grid2">
+      <button class="btn primary" id="eCopy">複製內容</button>
+      <button class="btn" id="eDown">下載檔案</button>
+    </div>
+    <p class="note" id="eNote">若下載沒有反應，請按「複製內容」，貼到記事本後另存為檔案。</p>
+  </div>
+</dialog>
+
+<script>
+(()=>{
+'use strict';
+const $=s=>document.querySelector(s);
+const cv=$('#cv'); let ctx=cv.getContext('2d');
+const TAU=Math.PI*2, hyp=Math.hypot;
+const KEY='pocketcad.doc.v1', SKEY='pocketcad.settings.v1';
+const CFONT='"Barlow Semi Condensed","Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif';
+let W=0,H=0,DPR=1, C={};
+const view={x:80,y:50,z:3};
+let doc=null, sel=new Set(), undoStack=[], redoStack=[];
+let settings={osnap:true,grid:true,ortho:false,offset:false};
+let T={id:'select',pts:[],phase:null,base:null,data:{}};
+let cursor=null, boxStart=null, lastPt=null, needDraw=false;
+
+/* ---------- 文件 ---------- */
+function blankDoc(){return {layers:[{name:'0',color:'auto',on:true}],cur:0,ents:[],nextId:1,textH:5,dec:2,offD:10,hatch:{name:'ANSI31',s:2,a:0}};}
+/* 外部參考狀態（清單、已載入的唯讀物件、參考圖層定義），與 doc 分開存放 */
+let XS={xrefs:[],ents:[],layers:{}};
+let XSV=0, XI=null;
+const XLIMIT=150000;   /* 底圖／外部參考物件超過這個數量時，匯出不包含它們 */   /* XS 的版本號（變動時加一，讓快取的底圖畫面與空間索引重建） */
+function sampleDoc(){
+  const d=blankDoc();
+  d.layers=[{name:'0',color:'auto',on:true},{name:'外形',color:'auto',on:true},{name:'孔',color:'#2a9fb0',on:true},{name:'中心線',color:'#d64545',on:true},{name:'標註',color:'#3f9a5c',on:true}];
+  const add=(o,l)=>{o.id=d.nextId++;o.layer=l;d.ents.push(o);};
+  add({type:'pline',closed:true,pts:[[0,0],[160,0],[160,100],[0,100]]},1);
+  add({type:'circle',cx:80,cy:50,r:32},1);
+  for(const [x,y] of [[15,15],[145,15],[15,85],[145,85]]) add({type:'circle',cx:x,cy:y,r:6},2);
+  add({type:'circle',cx:80,cy:50,r:25},2);
+  { const ring=r=>Array.from({length:96},(_,k)=>[80+r*Math.cos(k*TAU/96),50+r*Math.sin(k*TAU/96)]);
+    add({type:'hatch',name:'ANSI31',solid:false,loops:[ring(32),ring(25)],pat:makePat('ANSI31',1.5,0)},1); }
+  add({type:'line',x1:40,y1:50,x2:120,y2:50},3);
+  add({type:'line',x1:80,y1:10,x2:80,y2:90},3);
+  add({type:'dim',x1:0,y1:0,x2:160,y2:0,ox:80,oy:-14,h:4},4);
+  add({type:'dim',x1:160,y1:0,x2:160,y2:100,ox:176,oy:50,h:4},4);
+  add({type:'dim',x1:15,y1:85,x2:145,y2:85,ox:80,oy:110,h:4},4);
+  add({type:'text',x:24,y:24,h:4,s:'4×Ø12 貫穿',rot:0},4);
+  add({type:'text',x:0,y:124,h:7,s:'範例圖面：安裝底板 160×100 t10',rot:0},0);
+  d.cur=1; return d;
+}
+/* 儲存：圖面存在 IndexedDB（容量大，數萬個物件的 DWG 也存得下）；不能用時才退回 localStorage */
+let idbConn=null;
+function idbOpen(){ if(idbConn) return Promise.resolve(idbConn);
+  return new Promise((res,rej)=>{ try{ const r=indexedDB.open('pocketcad',1); r.onupgradeneeded=()=>r.result.createObjectStore('kv'); r.onsuccess=()=>{idbConn=r.result; res(idbConn);}; r.onerror=()=>rej(r.error); }catch(e){rej(e);} }); }
+async function idbGet(k){ const db=await idbOpen(); return new Promise((res,rej)=>{ const q=db.transaction('kv','readonly').objectStore('kv').get(k); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); }
+async function idbPut(k,v){ const db=await idbOpen(); return new Promise((res,rej)=>{ const t=db.transaction('kv','readwrite'); t.objectStore('kv').put(v,k); t.oncomplete=()=>res(); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error); }); }
+let saveTimer=0, saveWarned=false;
+function save(){ clearTimeout(saveTimer); saveTimer=setTimeout(saveNow,400); }
+async function saveNow(){ clearTimeout(saveTimer); saveTimer=0;
+  try{ await idbPut('doc',doc); try{localStorage.removeItem(KEY);}catch(_){} }
+  catch(_){ try{localStorage.setItem(KEY,JSON.stringify(doc));}catch(e){ if(!saveWarned){saveWarned=true; toast('圖面太大，這台裝置存不下。請用「匯出專案 JSON」另存',6000);} } } }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden'&&saveTimer) saveNow(); });
+function saveSettings(){try{localStorage.setItem(SKEY,JSON.stringify(settings));}catch(_){}}
+async function load(){
+  try{const s=JSON.parse(localStorage.getItem(SKEY)||'null'); if(s) Object.assign(settings,s);}catch(_){}
+  try{const d=await idbGet('doc'); if(validDoc(d)){doc=Object.assign(blankDoc(),d);
+    try{const xs=await idbGet('xs'); if(xs&&Array.isArray(xs.ents)){XS=xs; XSV++; XI=null; relinkX(); warmIndex();}}catch(_){}
+    return false;}}catch(_){}
+  try{const d=JSON.parse(localStorage.getItem(KEY)||'null'); if(validDoc(d)){doc=Object.assign(blankDoc(),d);return false;}}catch(_){}
+  doc=sampleDoc(); return true;
+}
+function validDoc(d){return d&&Array.isArray(d.ents)&&Array.isArray(d.layers)&&d.layers.length>0;}
+/* 復原記錄：每步存整張圖的 JSON；總量超過約 60 MB 時丟掉最舊的，避免大圖吃光手機記憶體 */
+const HIST_MAX=60e6;
+function pushHist(stack,s){ stack.push(s); let tot=0; for(const x of stack) tot+=x.length; while(stack.length>1&&(tot>HIST_MAX||stack.length>200)){ tot-=stack.shift().length; } }
+function edit(fn){
+  pushHist(undoStack,JSON.stringify(doc));
+  redoStack=[]; fn(); save(); refreshUI();
+}
+function undo(){ if(!undoStack.length) return toast('沒有可復原的動作');
+  pushHist(redoStack,JSON.stringify(doc)); doc=JSON.parse(undoStack.pop()); afterHistory(); }
+function redo(){ if(!redoStack.length) return toast('沒有可重做的動作');
+  pushHist(undoStack,JSON.stringify(doc)); doc=JSON.parse(redoStack.pop()); afterHistory(); }
+function afterHistory(){ relinkX(); const ids=new Set(doc.ents.map(e=>e.id)); for(const id of [...sel]) if(!ids.has(id)) sel.delete(id);
+  T.pts=[]; if(T.phase==='txt') T.phase=null; save(); refreshUI(); }
+function addEnt(o){ edit(()=>{o.id=doc.nextId++; o.layer=doc.cur; doc.ents.push(o);}); }
+const visible=e=>{const L=doc.layers[e.layer]; return !L||L.on!==false;};
+const selEnts=()=>doc.ents.filter(e=>sel.has(e.id));
+function entColor(e){ if(e.color) return e.color; const L=doc.layers[e.layer]||doc.layers[0]; return (!L||L.color==='auto')?C.ink:L.color;}
+
+/* ---------- 座標 ---------- */
+const w2s=(x,y)=>[W/2+(x-view.x)*view.z, H/2-(y-view.y)*view.z];
+const s2w=(sx,sy)=>[view.x+(sx-W/2)/view.z, view.y-(sy-H/2)/view.z];
+const clampZ=z=>Math.min(5000,Math.max(0.0005,z));
+function fmt(n,d){ d=d??doc.dec??2; let s=(+n).toFixed(d); if(s.indexOf('.')>=0) s=s.replace(/\.?0+$/,''); return s==='-0'?'0':s; }
+const D2=(a,b)=>hyp(a[0]-b[0],a[1]-b[1]);
+
+/* ---------- 幾何 ---------- */
+function distSeg(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy;let t=l?((px-ax)*dx+(py-ay)*dy)/l:0;t=Math.max(0,Math.min(1,t));return hyp(px-ax-t*dx,py-ay-t*dy);}
+const normA=a=>((a%TAU)+TAU)%TAU;
+const angIn=(a,a1,a2)=>normA(a-a1)<=normA(a2-a1)+1e-9;
+const arcPt=(e,a)=>[e.cx+e.r*Math.cos(a),e.cy+e.r*Math.sin(a)];
+function circ3(a,b,c){
+  const d=2*(a[0]*(b[1]-c[1])+b[0]*(c[1]-a[1])+c[0]*(a[1]-b[1])); if(Math.abs(d)<1e-12) return null;
+  const A=a[0]*a[0]+a[1]*a[1],B=b[0]*b[0]+b[1]*b[1],Cc=c[0]*c[0]+c[1]*c[1];
+  const ux=(A*(b[1]-c[1])+B*(c[1]-a[1])+Cc*(a[1]-b[1]))/d, uy=(A*(c[0]-b[0])+B*(a[0]-c[0])+Cc*(b[0]-a[0]))/d;
+  return [ux,uy,hyp(a[0]-ux,a[1]-uy)];
+}
+function arc3(s,m,e){
+  const c=circ3(s,m,e); if(!c) return null; const [cx,cy,r]=c;
+  const as=Math.atan2(s[1]-cy,s[0]-cx), ae=Math.atan2(e[1]-cy,e[0]-cx), am=Math.atan2(m[1]-cy,m[0]-cx);
+  return angIn(am,as,ae)?{type:'arc',cx,cy,r,a1:as,a2:ae}:{type:'arc',cx,cy,r,a1:ae,a2:as};
+}
+function lineX(a,b,c,d){const r=[b[0]-a[0],b[1]-a[1]],s=[d[0]-c[0],d[1]-c[1]],den=r[0]*s[1]-r[1]*s[0]; if(Math.abs(den)<1e-12) return null; const t=((c[0]-a[0])*s[1]-(c[1]-a[1])*s[0])/den; return [a[0]+t*r[0],a[1]+t*r[1]];}
+function segsOf(e){
+  if(e.type==='line') return [[e.x1,e.y1,e.x2,e.y2]];
+  if(e.type==='pline'){const r=[],p=e.pts,n=p.length,m=e.closed?n:n-1; for(let i=0;i<m;i++){const a=p[i],b=p[(i+1)%n]; r.push([a[0],a[1],b[0],b[1]]);} return r;}
+  return [];
+}
+function circOf(e){ if(e.type==='circle') return {cx:e.cx,cy:e.cy,r:e.r}; if(e.type==='arc') return {cx:e.cx,cy:e.cy,r:e.r,a1:e.a1,a2:e.a2}; return null; }
+const onC=(c,x,y)=>c.a1===undefined||angIn(Math.atan2(y-c.cy,x-c.cx),c.a1,c.a2);
+function segX(s,t){const [x1,y1,x2,y2]=s,[x3,y3,x4,y4]=t; const d=(x2-x1)*(y4-y3)-(y2-y1)*(x4-x3); if(Math.abs(d)<1e-12) return null;
+  const u=((x3-x1)*(y4-y3)-(y3-y1)*(x4-x3))/d, v=((x3-x1)*(y2-y1)-(y3-y1)*(x2-x1))/d;
+  if(u<-1e-9||u>1+1e-9||v<-1e-9||v>1+1e-9) return null; return [x1+u*(x2-x1),y1+u*(y2-y1)];}
+function segCirc(s,c){const [x1,y1,x2,y2]=s,dx=x2-x1,dy=y2-y1,fx=x1-c.cx,fy=y1-c.cy,A=dx*dx+dy*dy,B=2*(fx*dx+fy*dy),K=fx*fx+fy*fy-c.r*c.r,disc=B*B-4*A*K;
+  if(disc<0||A===0) return []; const q=Math.sqrt(disc),out=[];
+  for(const t of [(-B-q)/(2*A),(-B+q)/(2*A)]){ if(t<-1e-9||t>1+1e-9) continue; const x=x1+t*dx,y=y1+t*dy; if(onC(c,x,y)) out.push([x,y]); } return out;}
+function circCirc(a,b){const d=hyp(b.cx-a.cx,b.cy-a.cy); if(d<1e-12||d>a.r+b.r||d<Math.abs(a.r-b.r)) return [];
+  const l=(a.r*a.r-b.r*b.r+d*d)/(2*d), h=Math.sqrt(Math.max(0,a.r*a.r-l*l)), mx=a.cx+l*(b.cx-a.cx)/d, my=a.cy+l*(b.cy-a.cy)/d;
+  return [[mx+h*(b.cy-a.cy)/d,my-h*(b.cx-a.cx)/d],[mx-h*(b.cy-a.cy)/d,my+h*(b.cx-a.cx)/d]].filter(p=>onC(a,p[0],p[1])&&onC(b,p[0],p[1]));}
+function interAll(e1,e2){const S1=segsOf(e1),S2=segsOf(e2),C1=circOf(e1),C2=circOf(e2),out=[];
+  for(const s of S1) for(const t of S2){const p=segX(s,t); if(p) out.push(p);}
+  if(C2) for(const s of S1) out.push(...segCirc(s,C2));
+  if(C1) for(const t of S2) out.push(...segCirc(t,C1));
+  if(C1&&C2) out.push(...circCirc(C1,C2)); return out;}
+
+/* 文字量測 */
+const TW=new Map(), LS=1.66;
+function textW(s,h){let w=TW.get(s); if(w===undefined){ctx.save();ctx.font='100px '+CFONT;w=ctx.measureText(s).width/100;ctx.restore(); if(TW.size>30000) TW.clear(); TW.set(s,w);} return w*h;}
+/* 文字外框（本地座標）：支援多行、左中右對齊、基線／底／中／頂、寬度係數 */
+function textBox(t){
+  const lines=String(t.s).split('\n'), n=lines.length, h=t.h, wf=t.wf||1;
+  let w=0; for(const l of lines) w=Math.max(w,textW(l,h)); w*=wf;
+  const tot=h+(n-1)*LS*h;
+  const first=t.va==='top'?-h:t.va==='middle'?tot/2-h:t.va==='bottom'?(n-1)*LS*h:0;
+  const x0=t.align==='center'?-w/2:t.align==='right'?-w:0;
+  return {lines,first,x0,w,y0:first-(n-1)*LS*h-0.2*h,y1:first+h};
+}
+function textCorners(t){const b=textBox(t),c=Math.cos(t.rot||0),s=Math.sin(t.rot||0);
+  return [[b.x0,b.y0],[b.x0+b.w,b.y0],[b.x0+b.w,b.y1],[b.x0,b.y1]].map(([u,v])=>[t.x+u*c-v*s,t.y+u*s+v*c]);}
+function textHit(t,x,y){const b=textBox(t),c=Math.cos(t.rot||0),s=Math.sin(t.rot||0),dx=x-t.x,dy=y-t.y;
+  const lx=dx*c+dy*s, ly=-dx*s+dy*c, cx=Math.max(b.x0,Math.min(b.x0+b.w,lx)), cy=Math.max(b.y0,Math.min(b.y1,ly)); return hyp(lx-cx,ly-cy);}
+
+/* 標註幾何 */
+function dimGeom(e){
+  const dx=e.x2-e.x1,dy=e.y2-e.y1,L=hyp(dx,dy)||1e-9,ux=dx/L,uy=dy/L,nx=-uy,ny=ux;
+  const d=(e.ox-e.x1)*nx+(e.oy-e.y1)*ny, h=e.h||doc.textH*0.8, sg=d>=0?1:-1, gap=h*0.3, ext=h*0.5;
+  const a=[e.x1+nx*d,e.y1+ny*d], b=[e.x2+nx*d,e.y2+ny*d];
+  const lines=[[e.x1+nx*gap*sg,e.y1+ny*gap*sg,a[0]+nx*ext*sg,a[1]+ny*ext*sg],[e.x2+nx*gap*sg,e.y2+ny*gap*sg,b[0]+nx*ext*sg,b[1]+ny*ext*sg],[a[0],a[1],b[0],b[1]]];
+  const as=Math.min(h*0.9,L/3), aw=as*0.32;
+  const arrows=[[a,[a[0]+ux*as+nx*aw,a[1]+uy*as+ny*aw],[a[0]+ux*as-nx*aw,a[1]+uy*as-ny*aw]],[b,[b[0]-ux*as+nx*aw,b[1]-uy*as+ny*aw],[b[0]-ux*as-nx*aw,b[1]-uy*as-ny*aw]]];
+  let rot=Math.atan2(uy,ux); if(rot>Math.PI/2+1e-9||rot<=-Math.PI/2+1e-9) rot+=Math.PI;
+  const upx=-Math.sin(rot), upy=Math.cos(rot), mx=(a[0]+b[0])/2, my=(a[1]+b[1])/2;
+  return {lines,arrows,text:{x:mx+upx*h*0.35,y:my+upy*h*0.35,h,s:fmt(L),rot,align:'center'}};
+}
+
+/* 距離、外框、鎖點 */
+function entDist(e,x,y){
+  switch(e.type){
+    case 'line': return distSeg(x,y,e.x1,e.y1,e.x2,e.y2);
+    case 'pline': {let m=Infinity; for(const s of segsOf(e)) m=Math.min(m,distSeg(x,y,...s)); return m;}
+    case 'circle': return Math.abs(hyp(x-e.cx,y-e.cy)-e.r);
+    case 'arc': { if(angIn(Math.atan2(y-e.cy,x-e.cx),e.a1,e.a2)) return Math.abs(hyp(x-e.cx,y-e.cy)-e.r);
+      const p1=arcPt(e,e.a1),p2=arcPt(e,e.a2); return Math.min(hyp(x-p1[0],y-p1[1]),hyp(x-p2[0],y-p2[1])); }
+    case 'text': return textHit(e,x,y);
+    case 'dim': {const g=dimGeom(e); let m=textHit(g.text,x,y); for(const s of g.lines) m=Math.min(m,distSeg(x,y,...s)); return m;}
+    case 'hatch': { if(inLoops(e.loops,x,y)) return 0; let m=Infinity; for(const s of loopSegs(e.loops)) m=Math.min(m,distSeg(x,y,...s)); return m; }
+  }
+  return Infinity;
+}
+function bbox(e){
+  let P=[];
+  switch(e.type){
+    case 'line': P=[[e.x1,e.y1],[e.x2,e.y2]]; break;
+    case 'pline': P=e.pts; break;
+    case 'circle': P=[[e.cx-e.r,e.cy-e.r],[e.cx+e.r,e.cy+e.r]]; break;
+    case 'arc': P=[arcPt(e,e.a1),arcPt(e,e.a2)]; for(let k=0;k<4;k++){const a=k*Math.PI/2; if(angIn(a,e.a1,e.a2)) P.push(arcPt(e,a));} break;
+    case 'text': P=textCorners(e); break;
+    case 'dim': {const g=dimGeom(e); for(const s of g.lines) P.push([s[0],s[1]],[s[2],s[3]]); P.push(...textCorners(g.text)); break;}
+    case 'hatch': for(const L of e.loops) for(const q of L) P.push(q); break;
+  }
+  let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity; for(const [x,y] of P){x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y);}
+  return [x0,y0,x1,y1];
+}
+function snapPts(e){
+  const r=[],P=(x,y,k)=>r.push({x,y,k});
+  switch(e.type){
+    case 'line': P(e.x1,e.y1,'end');P(e.x2,e.y2,'end');P((e.x1+e.x2)/2,(e.y1+e.y2)/2,'mid'); break;
+    case 'pline': e.pts.forEach(p=>P(p[0],p[1],'end')); for(const s of segsOf(e)) P((s[0]+s[2])/2,(s[1]+s[3])/2,'mid'); break;
+    case 'circle': P(e.cx,e.cy,'cen'); for(let k=0;k<4;k++) P(e.cx+e.r*Math.cos(k*Math.PI/2),e.cy+e.r*Math.sin(k*Math.PI/2),'quad'); break;
+    case 'arc': {P(e.cx,e.cy,'cen'); const a=arcPt(e,e.a1),b=arcPt(e,e.a2),m=arcPt(e,e.a1+normA(e.a2-e.a1)/2); P(a[0],a[1],'end');P(b[0],b[1],'end');P(m[0],m[1],'mid');
+      for(let k=0;k<4;k++){const q=k*Math.PI/2; if(angIn(q,e.a1,e.a2)){const p=arcPt(e,q);P(p[0],p[1],'quad');}} break;}
+    case 'text': P(e.x,e.y,'ins'); break;
+    case 'dim': P(e.x1,e.y1,'end');P(e.x2,e.y2,'end'); break;
+  }
+  return r;
+}
+const SNAPNAME={end:'端點',mid:'中點',cen:'圓心',quad:'四分點',int:'交點',ins:'插入點',grid:'格點'};
+function findSnap(w,tol){
+  if(!settings.osnap) return null;
+  let best=null,bd=tol; const near=[];
+  /* 先用外框快速排除離游標遠的物件（含外部參考的數十萬個物件），再算鎖點 */
+  const pad=tol*2;
+  const look=e=>{ if(!visible(e)) return;
+    const b=bbC(e); if(w[0]<b[0]-pad||w[0]>b[2]+pad||w[1]<b[1]-pad||w[1]>b[3]+pad) return;
+    for(const s of snapPts(e)){const d=hyp(s.x-w[0],s.y-w[1])*(s.k==='mid'||s.k==='quad'?1.15:1); if(d<bd){bd=d;best=s;}}
+    if(near.length<80&&e.type!=='text'&&e.type!=='dim'&&e.type!=='hatch'&&entDist(e,w[0],w[1])<tol*2) near.push(e);
+  };
+  for(const e of doc.ents) look(e);
+  xNear(w[0],w[1],pad,look);
+  for(let i=0;i<near.length;i++) for(let j=i+1;j<near.length;j++) for(const p of interAll(near[i],near[j])){const d=hyp(p[0]-w[0],p[1]-w[1]); if(d<bd){bd=d;best={x:p[0],y:p[1],k:'int'};}}
+  for(const e of near) if(e.type==='pline'){const S=segsOf(e); for(let i=0;i<S.length;i++) for(let j=i+2;j<S.length;j++){ if(e.closed&&i===0&&j===S.length-1) continue; const p=segX(S[i],S[j]); if(p){const d=hyp(p[0]-w[0],p[1]-w[1]); if(d<bd){bd=d;best={x:p[0],y:p[1],k:'int'};}}}}
+  return best;
+}
+/* 底圖空間索引：把 XS.ents 依外框放進固定大小的格子，鎖點時只看游標附近幾格 */
+function xIndex(){
+  if(XI&&XI.v===XSV) return XI;
+  const E=XS.ents, n=E.length, cx=[], cy=[];
+  for(let i=0;i<n;i+=Math.max(1,Math.floor(n/5000))){ const b=bbC(E[i]); if(isFinite(b[0])){ cx.push((b[0]+b[2])/2); cy.push((b[1]+b[3])/2);} }
+  cx.sort((a,b)=>a-b); cy.sort((a,b)=>a-b);
+  const q=(a,p)=>a.length?a[Math.min(a.length-1,Math.max(0,Math.round(p*(a.length-1))))]:0;
+  const cs=Math.max(q(cx,.99)-q(cx,.01),q(cy,.99)-q(cy,.01),1e-6)/256, OFF=524288, cells=new Map(), big=[];
+  for(const e of E){ const b=bbC(e); if(!isFinite(b[0])||!isFinite(b[3])) continue;
+    const i0=Math.floor(b[0]/cs),i1=Math.floor(b[2]/cs),j0=Math.floor(b[1]/cs),j1=Math.floor(b[3]/cs);
+    if((i1-i0+1)*(j1-j0+1)>64||Math.abs(i0)>=OFF||Math.abs(i1)>=OFF||Math.abs(j0)>=OFF||Math.abs(j1)>=OFF){ big.push(e); continue; }
+    for(let i=i0;i<=i1;i++) for(let j=j0;j<=j1;j++){ const k=(i+OFF)*1048576+(j+OFF); let c=cells.get(k); if(!c){c=[];cells.set(k,c);} c.push(e); } }
+  XI={v:XSV,cs,OFF,cells,big}; return XI;
+}
+/* 圖面載入後閒置時先建好索引，避免第一次觸碰畫面時卡住 */
+function warmIndex(){ const v=XSV; setTimeout(()=>{ if(v===XSV&&XS.ents.length>2000) xIndex(); },1500); }
+function xNear(x,y,pad,cb){
+  if(!XS.ents.length) return; const X=xIndex(); for(const e of X.big) cb(e);
+  const i0=Math.floor((x-pad)/X.cs),i1=Math.floor((x+pad)/X.cs),j0=Math.floor((y-pad)/X.cs),j1=Math.floor((y+pad)/X.cs);
+  if((i1-i0+1)*(j1-j0+1)>400){ for(const e of XS.ents) cb(e); return; }
+  const seen=(i1>i0||j1>j0)?new Set():null;
+  for(let i=i0;i<=i1;i++) for(let j=j0;j<=j1;j++){ const c=X.cells.get((i+X.OFF)*1048576+(j+X.OFF)); if(c) for(const e of c){ if(seen){ if(seen.has(e)) continue; seen.add(e);} cb(e); } }
+}
+function gridStep(){const target=14/view.z,p=Math.pow(10,Math.floor(Math.log10(target))); for(const m of [1,2,5,10]) if(p*m>=target) return p*m; return p*10;}
+/* 填充線內部點選的優先度低於邊界線，避免點不到邊上的線 */
+function hitEnt(w,tol,types){let best=null,bd=tol; for(const e of doc.ents){ if(!visible(e)||(types&&!types.includes(e.type))) continue; let d=entDist(e,w[0],w[1]); if(e.type==='hatch') d=Math.max(d,tol*0.6); if(d<bd){bd=d;best=e;}} return best;}
+
+/* ---------- 填充線 ---------- */
+const HPAT={
+  ANSI31:{n:'斜線',L:[[45,0,3.175]]},
+  ANSI37:{n:'交叉線',L:[[45,0,3.175],[135,0,3.175]]},
+  NET:{n:'方格',L:[[0,0,3.175],[90,0,3.175]]},
+  LINE:{n:'橫線',L:[[0,0,3.175]]},
+  DASH:{n:'虛線',L:[[0,0,3.175,[3.175,-1.5875]]]},
+  DOTS:{n:'點',L:[[0,0.79375,1.5875,[0,-1.5875]]]},
+  SOLID:{n:'實心',L:[]}
+};
+const HORDER=Object.keys(HPAT);
+function makePat(name,s,ang){
+  return ((HPAT[name]||HPAT.ANSI31).L).map(([deg,shift,sp,dash])=>{const a=deg*Math.PI/180+ang,u=[Math.cos(a),Math.sin(a)],n=[-u[1],u[0]];
+    return {a,x:0,y:0,dx:(u[0]*shift+n[0]*sp)*s,dy:(u[1]*shift+n[1]*sp)*s,dash:(dash||[]).map(v=>v*s)};});
+}
+function inLoops(loops,x,y){let c=false; for(const L of loops) for(let i=0,j=L.length-1;i<L.length;j=i++){const a=L[i],b=L[j]; if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0]) c=!c;} return c;}
+function loopSegs(loops){const r=[]; for(const L of loops) for(let i=0;i<L.length;i++){const a=L[i],b=L[(i+1)%L.length]; r.push([a[0],a[1],b[0],b[1]]);} return r;}
+const polyArea=L=>{let s=0; for(let i=0,j=L.length-1;i<L.length;j=i++) s+=(L[j][0]-L[i][0])*(L[j][1]+L[i][1]); return s/2;};
+/* 每組圖樣線與邊界相交後的區段（世界座標 t 參數），供匯出使用 */
+function patLineRuns(e,p,cb){
+  const u=[Math.cos(p.a),Math.sin(p.a)],n=[-u[1],u[0]],sp=p.dx*n[0]+p.dy*n[1],sh=p.dx*u[0]+p.dy*u[1]; if(Math.abs(sp)<1e-12) return;
+  const bb=bbox(e),C4=[[bb[0],bb[1]],[bb[2],bb[1]],[bb[2],bb[3]],[bb[0],bb[3]]].map(c=>(c[0]-p.x)*n[0]+(c[1]-p.y)*n[1]);
+  const k0=Math.ceil(Math.min(...C4)/sp-1e-9),k1=Math.floor(Math.max(...C4)/sp+1e-9),lo=Math.min(k0,k1),hi=Math.max(k0,k1);
+  const E=loopSegs(e.loops);
+  for(let k=lo;k<=hi;k++){ const o=[p.x+k*p.dx,p.y+k*p.dy],c=o[0]*n[0]+o[1]*n[1],ts=[];
+    for(const s of E){const da=s[0]*n[0]+s[1]*n[1]-c,db=s[2]*n[0]+s[3]*n[1]-c; if((da>0)!==(db>0)){const r=da/(da-db),X=s[0]+(s[2]-s[0])*r,Y=s[1]+(s[3]-s[1])*r; ts.push((X-o[0])*u[0]+(Y-o[1])*u[1]);}}
+    ts.sort((a,b)=>a-b); for(let i=0;i+1<ts.length;i+=2) if(cb(o,u,ts[i],ts[i+1])===false) return false; }
+}
+function dashRuns(t0,t1,dash,emit){
+  const L=dash.reduce((a,v)=>a+Math.abs(v),0); if(!dash.length||L<=1e-12){emit(t0,t1);return;}
+  let t=Math.floor(t0/L)*L,guard=0;
+  while(t<t1&&guard++<20000) for(const v of dash){const a=t,b=t+Math.abs(v); if(v===0){if(a>=t0&&a<=t1) emit(a,a);} else if(v>0){const s=Math.max(a,t0),e=Math.min(b,t1); if(e>s) emit(s,e);} t=b; if(t>=t1) break;}
+}
+/* 掃描線把實心區域切成梯形（DXF R12 的 SOLID） */
+function scanTraps(loops){
+  const E=loopSegs(loops).filter(s=>Math.abs(s[1]-s[3])>1e-12), ys=[...new Set(loops.flat().map(q=>q[1]))].sort((a,b)=>a-b), out=[];
+  for(let k=0;k+1<ys.length&&out.length<50000;k++){ const y0=ys[k],y1=ys[k+1],ym=(y0+y1)/2,xs=[];
+    for(const s of E){const lo=Math.min(s[1],s[3]),hi=Math.max(s[1],s[3]); if(lo<=y0&&hi>=y1){const X=y=>s[0]+(s[2]-s[0])*(y-s[1])/(s[3]-s[1]); xs.push([X(ym),X(y0),X(y1)]);}}
+    xs.sort((a,b)=>a[0]-b[0]); for(let i=0;i+1<xs.length;i+=2){const A=xs[i],B=xs[i+1]; out.push([[A[1],y0],[B[1],y0],[B[2],y1],[A[2],y1]]);} }
+  return out;
+}
+/* 點選內部找封閉區域：把所有線段在交點切開，建平面圖，找包含該點的最小面，再加入裡面的島 */
+function findRegion(w){
+  const polys=[];
+  /* 只用畫面範圍內的物件（含外部參考）：大型圖才算得動；邊界請讓它整個出現在畫面上 */
+  const [vx0,vy1]=s2w(0,0),[vx1,vy0]=s2w(W,H);
+  for(const list of [doc.ents,XS.ents]) for(const e of list){ if(!visible(e)) continue;
+    const bb=bbC(e); if(bb[2]<vx0||bb[0]>vx1||bb[3]<vy0||bb[1]>vy1) continue;
+    if(e.type==='line') polys.push([[e.x1,e.y1],[e.x2,e.y2]]);
+    else if(e.type==='pline') polys.push(e.closed?[...e.pts,e.pts[0]]:e.pts);
+    else if(e.type==='circle'){const pts=[]; for(let k=0;k<=72;k++){const t=TAU*k/72; pts.push([e.cx+e.r*Math.cos(t),e.cy+e.r*Math.sin(t)]);} polys.push(pts);}
+    else if(e.type==='arc'){const sp=normA(e.a2-e.a1)||TAU,n=Math.max(4,Math.ceil(72*sp/TAU)),pts=[]; for(let k=0;k<=n;k++) pts.push(arcPt(e,e.a1+sp*k/n)); polys.push(pts);}
+  }
+  const S=[]; let X0=Infinity,Y0=Infinity,X1=-Infinity,Y1=-Infinity;
+  for(const P of polys) for(let i=0;i+1<P.length;i++){const a=P[i],b=P[i+1]; if(a[0]===b[0]&&a[1]===b[1]) continue; S.push({a,b,x0:Math.min(a[0],b[0]),x1:Math.max(a[0],b[0]),y0:Math.min(a[1],b[1]),y1:Math.max(a[1],b[1]),cut:[0,1]});
+    X0=Math.min(X0,a[0],b[0]);Y0=Math.min(Y0,a[1],b[1]);X1=Math.max(X1,a[0],b[0]);Y1=Math.max(Y1,a[1],b[1]);}
+  if(!S.length) return null; if(S.length>60000){toast('物件太多，無法自動找邊界'); return null;}
+  const size=Math.max(X1-X0,Y1-Y0,1e-9), eps=size*1e-9, q=size*1e-7;
+  S.sort((p,r)=>p.x0-r.x0);
+  for(let i=0;i<S.length;i++){const A=S[i]; for(let j=i+1;j<S.length&&S[j].x0<=A.x1+eps;j++){const B=S[j]; if(B.y0>A.y1+eps||B.y1<A.y0-eps) continue;
+    const rx=A.b[0]-A.a[0],ry=A.b[1]-A.a[1],sx=B.b[0]-B.a[0],sy=B.b[1]-B.a[1],den=rx*sy-ry*sx; if(Math.abs(den)<1e-14*(rx*rx+ry*ry+sx*sx+sy*sy)) continue;
+    const ox=B.a[0]-A.a[0],oy=B.a[1]-A.a[1],t=(ox*sy-oy*sx)/den,u=(ox*ry-oy*rx)/den,lt=eps/Math.hypot(rx,ry),lu=eps/Math.hypot(sx,sy);
+    if(t<-lt||t>1+lt||u<-lu||u>1+lu) continue; A.cut.push(Math.min(1,Math.max(0,t))); B.cut.push(Math.min(1,Math.max(0,u)));}}
+  const vid=new Map(),V=[],key=p=>Math.round(p[0]/q)+','+Math.round(p[1]/q);
+  const vert=p=>{const k=key(p); let id=vid.get(k); if(id===undefined){id=V.length; vid.set(k,id); V.push(p);} return id;};
+  const ES=new Set(),adj=[];
+  for(const s of S){ const cs=[...new Set(s.cut)].sort((p,r)=>p-r); let prev=vert(s.a);
+    for(let i=1;i<cs.length;i++){const t=cs[i],id=vert(t===1?s.b:[s.a[0]+(s.b[0]-s.a[0])*t,s.a[1]+(s.b[1]-s.a[1])*t]); if(id!==prev){const k=prev<id?prev+'|'+id:id+'|'+prev; if(!ES.has(k)){ES.add(k);(adj[prev]=adj[prev]||new Set()).add(id);(adj[id]=adj[id]||new Set()).add(prev);}} prev=id;} }
+  let changed=true; while(changed){changed=false; for(let v=0;v<V.length;v++){const s=adj[v]; if(s&&s.size===1){const o=[...s][0]; adj[o].delete(v); s.clear(); changed=true;}}}
+  const ord=[]; for(let v=0;v<V.length;v++){const s=adj[v]; if(!s||!s.size) continue; ord[v]=[...s].sort((a,b)=>Math.atan2(V[a][1]-V[v][1],V[a][0]-V[v][0])-Math.atan2(V[b][1]-V[v][1],V[b][0]-V[v][0]));}
+  const comp=V.map((_,i)=>i),find=x=>{while(comp[x]!==x) x=comp[x]=comp[comp[x]]; return x;};
+  for(let v=0;v<V.length;v++) if(ord[v]) for(const o of ord[v]) comp[find(v)]=find(o);
+  const seen=new Set(),faces=[];
+  for(let v=0;v<V.length;v++) if(ord[v]) for(const o of ord[v]){ let a=v,b=o; if(seen.has(a+'>'+b)) continue; const poly=[]; let guard=0;
+    while(!seen.has(a+'>'+b)&&guard++<200000){ seen.add(a+'>'+b); poly.push(V[a]); const L=ord[b],i=L.indexOf(a),nx=L[(i-1+L.length)%L.length]; a=b; b=nx; }
+    if(poly.length>=3) faces.push({poly,area:polyArea(poly),c:find(v)}); }
+  let best=null; for(const f of faces) if(f.area>0&&inLoops([f.poly],w[0],w[1])&&(!best||f.area<best.area)) best=f;
+  if(!best) return null;
+  const outer={}; for(const f of faces) if(f.area<0&&(!outer[f.c]||f.area<outer[f.c].area)) outer[f.c]=f;
+  const loops=[best.poly];
+  for(const c in outer){ const f=outer[c]; if(+c===best.c) continue; const p0=f.poly[0];
+    if(-f.area<best.area&&inLoops([best.poly],p0[0],p0[1])&&!inLoops([f.poly],w[0],w[1])) loops.push(f.poly.slice().reverse()); }
+  return loops;
+}
+function hatchPath(e){const p=new Path2D(); for(const L of e.loops){ L.forEach((q,i)=>{const s=w2s(q[0],q[1]); i?p.lineTo(s[0],s[1]):p.moveTo(s[0],s[1]);}); p.closePath(); } return p;}
+function drawHatch(e,col,opt){
+  const path=hatchPath(e), selm=!!(opt&&opt.dash); ctx.save(); ctx.fillStyle=col; ctx.strokeStyle=col; ctx.setLineDash([]);
+  if(e.solid||!e.pat||!e.pat.length){ ctx.globalAlpha=selm?.45:.85; ctx.fill(path,'evenodd'); }
+  else{
+    ctx.clip(path,'evenodd'); ctx.lineWidth=1;
+    const bb=bbC(e),[vx0,vy1]=s2w(0,0),[vx1,vy0]=s2w(W,H),X0=Math.max(bb[0],vx0),X1=Math.min(bb[2],vx1),Y0=Math.max(bb[1],vy0),Y1=Math.min(bb[3],vy1);
+    if(X0<=X1&&Y0<=Y1){ const C4=[[X0,Y0],[X1,Y0],[X1,Y1],[X0,Y1]];
+      for(const p of e.pat){ const u=[Math.cos(p.a),Math.sin(p.a)],n=[-u[1],u[0]],sp=p.dx*n[0]+p.dy*n[1],sh=p.dx*u[0]+p.dy*u[1];
+        const pn=C4.map(c=>(c[0]-p.x)*n[0]+(c[1]-p.y)*n[1]),pu=C4.map(c=>(c[0]-p.x)*u[0]+(c[1]-p.y)*u[1]);
+        const ka=Math.min(...pn)/sp,kb=Math.max(...pn)/sp,k0=Math.ceil(Math.min(ka,kb)),k1=Math.floor(Math.max(ka,kb));
+        if(Math.abs(sp)*view.z<2.5||k1-k0>3000){ ctx.globalAlpha=.3; ctx.fill(path,'evenodd'); ctx.globalAlpha=1; continue; }
+        let dash=null,plen=0;
+        if(p.dash&&p.dash.length){ const seq=[]; for(const v of p.dash){const on=v>=0,len=v===0?1.2:Math.abs(v)*view.z; if(seq.length&&seq[seq.length-1][0]===on) seq[seq.length-1][1]+=len; else seq.push([on,len]);}
+          if(!seq[0][0]) seq.unshift([true,0]); if(seq.length%2) seq.push([false,0]); dash=seq.map(x=>x[1]); plen=p.dash.reduce((a,v)=>a+Math.abs(v),0); if(dash.reduce((a,b)=>a+b,0)<2) dash=null; }
+        const umin=Math.min(...pu),umax=Math.max(...pu);
+        if(!dash){ ctx.beginPath(); for(let k=k0;k<=k1;k++){const ox=p.x+k*p.dx,oy=p.y+k*p.dy,t0=umin-k*sh,t1=umax-k*sh; mv(ox+u[0]*t0,oy+u[1]*t0); ln(ox+u[0]*t1,oy+u[1]*t1);} ctx.stroke(); }
+        else { ctx.setLineDash(dash); for(let k=k0;k<=k1;k++){const ox=p.x+k*p.dx,oy=p.y+k*p.dy,t0=umin-k*sh,t1=umax-k*sh;
+          ctx.lineDashOffset=((t0%plen)+plen)%plen*view.z; ctx.beginPath(); mv(ox+u[0]*t0,oy+u[1]*t0); ln(ox+u[0]*t1,oy+u[1]*t1); ctx.stroke();} ctx.setLineDash([]); }
+      } }
+  }
+  ctx.restore();
+  if(selm){ ctx.save(); ctx.strokeStyle=col; ctx.lineWidth=2; ctx.setLineDash([7,4]); ctx.stroke(path); ctx.restore(); }
+}
+
+/* 變換 */
+function transformEnt(e,f,o){
+  const n=JSON.parse(JSON.stringify(e)), s=o.s||1;
+  switch(n.type){
+    case 'line': [n.x1,n.y1]=f([n.x1,n.y1]); [n.x2,n.y2]=f([n.x2,n.y2]); break;
+    case 'pline': n.pts=n.pts.map(f); break;
+    case 'circle': [n.cx,n.cy]=f([n.cx,n.cy]); n.r*=s; break;
+    case 'arc': {const a=f(arcPt(e,e.a1)),b=f(arcPt(e,e.a2)); [n.cx,n.cy]=f([e.cx,e.cy]); n.r*=s;
+      let a1=Math.atan2(a[1]-n.cy,a[0]-n.cx),a2=Math.atan2(b[1]-n.cy,b[0]-n.cx); if(o.mir){const t=a1;a1=a2;a2=t;} n.a1=a1;n.a2=a2; break;}
+    case 'text': [n.x,n.y]=f([n.x,n.y]); n.h*=s; n.rot=(n.rot||0)+(o.rot||0); break;
+    case 'dim': [n.x1,n.y1]=f([n.x1,n.y1]); [n.x2,n.y2]=f([n.x2,n.y2]); [n.ox,n.oy]=f([n.ox,n.oy]); if(n.h) n.h*=s; break;
+    case 'hatch': { n.loops=e.loops.map(L=>L.map(f)); const o0=f([0,0]),lin=v=>{const q=f(v); return [q[0]-o0[0],q[1]-o0[1]];};
+      n.pat=(e.pat||[]).map(p=>{const b=f([p.x,p.y]),u=lin([Math.cos(p.a),Math.sin(p.a)]),d=lin([p.dx,p.dy]),k=hyp(u[0],u[1])||1;
+        return {a:Math.atan2(u[1],u[0]),x:b[0],y:b[1],dx:d[0],dy:d[1],dash:(p.dash||[]).map(v=>v*k)};}); break; }
+  }
+  return n;
+}
+const moveXf=(dx,dy)=>({f:p=>[p[0]+dx,p[1]+dy],o:{}});
+function rotXf(b,t){const c=Math.cos(t),s=Math.sin(t);return {f:p=>{const x=p[0]-b[0],y=p[1]-b[1];return [b[0]+x*c-y*s,b[1]+x*s+y*c];},o:{rot:t}};}
+const sclXf=(b,k)=>({f:p=>[b[0]+(p[0]-b[0])*k,b[1]+(p[1]-b[1])*k],o:{s:k}});
+function mirXf(a,b){const dx=b[0]-a[0],dy=b[1]-a[1],L2=dx*dx+dy*dy;return {f:p=>{const t=((p[0]-a[0])*dx+(p[1]-a[1])*dy)/L2,fx=a[0]+t*dx,fy=a[1]+t*dy;return [2*fx-p[0],2*fy-p[1]];},o:{mir:true}};}
+function applyXf(xf,copy){ edit(()=>{ for(const e of selEnts()){ const n=transformEnt(e,xf.f,xf.o); if(copy){n.id=doc.nextId++; doc.ents.push(n);} else { Object.assign(e,n); BBC.delete(e); } } }); }
+/* 外框快取：物件被原地修改時（上面的 Object.assign）要刪掉；復原／重做會產生新物件，自然失效 */
+const BBC=new WeakMap();
+function bbC(e){let b=BBC.get(e); if(!b){b=bbox(e); BBC.set(e,b);} return b;}
+
+function offsetPline(pts,closed,d){
+  const n=pts.length,m=closed?n:n-1,segs=[];
+  for(let i=0;i<m;i++){const a=pts[i],b=pts[(i+1)%n],dx=b[0]-a[0],dy=b[1]-a[1],l=hyp(dx,dy)||1,nx=-dy/l*d,ny=dx/l*d; segs.push([[a[0]+nx,a[1]+ny],[b[0]+nx,b[1]+ny]]);}
+  const out=[];
+  for(let i=0;i<n;i++){
+    if(!closed&&i===0){out.push(segs[0][0]);continue;}
+    if(!closed&&i===n-1){out.push(segs[m-1][1]);continue;}
+    const s1=segs[(i-1+m)%m],s2=segs[i%m]; out.push(lineX(s1[0],s1[1],s2[0],s2[1])||s2[0]);
+  }
+  return out;
+}
+function offsetEnt(e,p,d){
+  switch(e.type){
+    case 'line': {const dx=e.x2-e.x1,dy=e.y2-e.y1,L=hyp(dx,dy)||1,nx=-dy/L,ny=dx/L,sg=((p[0]-e.x1)*nx+(p[1]-e.y1)*ny)>=0?d:-d;
+      return {...e,x1:e.x1+nx*sg,y1:e.y1+ny*sg,x2:e.x2+nx*sg,y2:e.y2+ny*sg};}
+    case 'circle': case 'arc': {const r=e.r+(hyp(p[0]-e.cx,p[1]-e.cy)<e.r?-d:d); return r>1e-9?{...e,r}:null;}
+    case 'pline': {const S=segsOf(e); let k=0,bd=Infinity; S.forEach((s,i)=>{const dd=distSeg(p[0],p[1],...s); if(dd<bd){bd=dd;k=i;}});
+      const s=S[k],cr=(s[2]-s[0])*(p[1]-s[1])-(s[3]-s[1])*(p[0]-s[0]); return {...e,pts:offsetPline(e.pts,e.closed,cr>=0?d:-d)};}
+  }
+  return null;
+}
+
+/* ---------- 工具 ---------- */
+const IC={
+ select:'<path d="M6 3l13 8-6 1.5L10 19z"/>',
+ line:'<path d="M5 19L19 5"/><circle cx="5" cy="19" r="1.6"/><circle cx="19" cy="5" r="1.6"/>',
+ pline:'<path d="M3 18l5-9 6 6 7-11"/>',
+ rect:'<rect x="4" y="6" width="16" height="12" rx="1"/>',
+ circle:'<circle cx="12" cy="12" r="8"/><path d="M12 11v2M11 12h2"/>',
+ arc:'<path d="M4 18A10 10 0 0 1 20 9"/><circle cx="4" cy="18" r="1.4"/><circle cx="20" cy="9" r="1.4"/>',
+ text:'<path d="M5 6V4h14v2M12 4v16M9 20h6"/>',
+ dim:'<path d="M4 6v12M20 6v12M4 12h16M4 12l3-2M4 12l3 2M20 12l-3-2M20 12l-3 2"/>',
+ dist:'<path d="M3 17L17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/>',
+ move:'<path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/>',
+ copy:'<rect x="8" y="8" width="12" height="12" rx="1.5"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
+ rotate:'<path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v5h-5"/>',
+ scale:'<path d="M4 20h7v-7H4z"/><path d="M10 14L20 4M14 4h6v6"/>',
+ mirror:'<path d="M12 3v3M12 9v3M12 15v3M12 21v0"/><path d="M9 7L4 17h5zM15 7l5 10h-5z"/>',
+ offset:'<path d="M4 19C6 11 10 8 20 7"/><path d="M4 14C6 8 9 4 20 3" stroke-dasharray="2 3"/>',
+ erase:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/>',
+ hatch:'<rect x="4" y="4" width="16" height="16" rx="1"/><path d="M4 12l8-8M4 20L20 4M12 20l8-8"/>'
+};
+const TOOLS=[
+ ['select','選取'],'|',['line','直線'],['pline','聚合線'],['rect','矩形'],['circle','圓'],['arc','圓弧'],'|',
+ ['text','文字'],['dim','標註'],['hatch','填充'],['dist','量測'],'|',
+ ['move','移動'],['copy','複製'],['rotate','旋轉'],['scale','縮放'],['mirror','鏡射'],['offset','偏移'],['erase','刪除']
+];
+const TNAME=Object.fromEntries(TOOLS.filter(t=>t!=='|')); TNAME.zoomw='框選放大';
+const MODS=['move','copy','rotate','scale','mirror','erase'];
+function buildTools(){
+  const nav=$('#tools');
+  nav.innerHTML=TOOLS.map(t=>t==='|'?'<i class="tsep"></i>':`<button class="tool" data-t="${t[0]}" aria-pressed="false"><svg class="i" viewBox="0 0 24 24">${IC[t[0]]}</svg>${t[1]}</button>`).join('');
+  nav.addEventListener('click',e=>{const b=e.target.closest('.tool'); if(b) setTool(b.dataset.t);});
+}
+function setTool(id){
+  T={id,pts:[],phase:null,base:null,data:{}}; boxStart=null;
+  if(MODS.includes(id)){
+    if(id==='erase'&&sel.size){ doErase(); T={id:'select',pts:[],phase:null,base:null,data:{}}; }
+    else T.phase=sel.size?'base':'pick';
+  }
+  if(id==='offset') T.phase='dist';
+  refreshUI();
+}
+function needsPoint(){
+  if(T.id==='select'||T.id==='hatch') return false;
+  if(['pick','dist','ent','txt'].includes(T.phase)) return false;
+  if(T.id==='scale'&&T.phase==='second') return false;
+  return true;
+}
+function refPoint(){ if(T.base&&T.phase==='second') return T.base; if(T.pts.length) return T.pts[T.pts.length-1]; return null; }
+function doErase(){ if(!sel.size) return; const n=sel.size; edit(()=>{doc.ents=doc.ents.filter(e=>!sel.has(e.id));}); sel.clear(); toast(`已刪除 ${n} 個物件`); refreshUI(); }
+function endMod(){ T={id:'select',pts:[],phase:null,base:null,data:{}}; refreshUI(); }
+function modXf(c){
+  const b=T.base; if(!b) return null;
+  switch(T.id){
+    case 'move': case 'copy': return moveXf(c[0]-b[0],c[1]-b[1]);
+    case 'rotate': return D2(b,c)<1e-9?null:rotXf(b,Math.atan2(c[1]-b[1],c[0]-b[0]));
+    case 'mirror': return D2(b,c)<1e-9?null:mirXf(b,c);
+  }
+  return null;
+}
+
+function addPoint(p){
+  lastPt=p; const P=T.pts;
+  switch(T.id){
+    case 'line': P.push(p); if(P.length>1){const a=P[P.length-2]; if(D2(a,p)>1e-9) addEnt({type:'line',x1:a[0],y1:a[1],x2:p[0],y2:p[1]}); else P.pop();} break;
+    case 'pline': if(!P.length||D2(P[P.length-1],p)>1e-9) P.push(p); break;
+    case 'rect': P.push(p); if(P.length===2){const [a,b]=P; T.pts=[]; if(Math.abs(a[0]-b[0])<1e-9||Math.abs(a[1]-b[1])<1e-9){toast('矩形寬或高不能為 0');break;}
+      addEnt({type:'pline',closed:true,pts:[[a[0],a[1]],[b[0],a[1]],[b[0],b[1]],[a[0],b[1]]]});} break;
+    case 'circle': P.push(p); if(P.length===2){const r=D2(P[0],p); T.pts=[]; if(r<1e-9){toast('半徑不能為 0');break;} addEnt({type:'circle',cx:P[0][0],cy:P[0][1],r});} break;
+    case 'arc': P.push(p); if(P.length===3){const a=arc3(P[0],P[1],P[2]); T.pts=[]; if(a) addEnt(a); else toast('三點共線，無法建立圓弧');} break;
+    case 'text': T.pts=[p]; T.phase='txt'; focusCmd(true); break;
+    case 'dim': P.push(p); if(P.length===3){const [a,b]=P; T.pts=[]; if(D2(a,b)<1e-9){toast('兩點重合，無法標註');break;}
+      addEnt({type:'dim',x1:a[0],y1:a[1],x2:b[0],y2:b[1],ox:p[0],oy:p[1],h:doc.textH*0.8});} break;
+    case 'zoomw': P.push(p); if(P.length===2){ const [a,b]=P; T.pts=[]; zoomToBox(a,b); endZoomWin(); return; } break;
+    case 'dist': P.push(p); if(P.length===2){const [a,b]=P,dx=b[0]-a[0],dy=b[1]-a[1]; T.pts=[];
+      toast(`距離 ${fmt(hyp(dx,dy))}　ΔX ${fmt(dx)}　ΔY ${fmt(dy)}　角度 ${fmt(normA(Math.atan2(dy,dx))*180/Math.PI,1)}°`,4500);} break;
+    case 'move': case 'copy': case 'rotate': case 'scale': case 'mirror':
+      if(T.phase==='base'){T.base=p; T.phase='second';}
+      else if(T.phase==='second'){ const xf=modXf(p); if(!xf){ if(T.id==='scale') toast('請在指令列輸入比例係數'); break; }
+        if(T.id==='copy'){applyXf(xf,true);} else {applyXf(xf,T.id==='mirror'); endMod(); return;} }
+      break;
+    case 'offset': if(T.phase==='side'){const e=doc.ents.find(x=>x.id===T.data.ent); const o=e&&offsetEnt(e,p,T.data.d);
+      if(o) edit(()=>{o.id=doc.nextId++; doc.ents.push(o);}); else toast('偏移距離太大，無法建立'); T.phase='ent';} break;
+  }
+  refreshUI();
+}
+function canFinish(){ return (['line','pline'].includes(T.id)&&T.pts.length>0)||T.phase==='pick'||(T.id==='copy'&&T.phase==='second')||(T.id==='offset'&&T.phase==='dist'&&doc.offD>0); }
+function canClose(){ return (T.id==='line'||T.id==='pline')&&T.pts.length>=3; }
+function finish(){
+  if(T.phase==='pick'){ if(!sel.size) return toast('請先點選物件'); boxStart=null; if(T.id==='erase'){doErase(); endMod(); return;} T.phase='base'; return refreshUI(); }
+  if(T.id==='pline'&&T.pts.length>=2) addEnt({type:'pline',closed:false,pts:T.pts.map(p=>[p[0],p[1]])});
+  if(T.id==='offset'&&T.phase==='dist'&&doc.offD>0){ T.data.d=doc.offD; T.phase='ent'; return refreshUI(); }
+  if(T.id==='copy'&&T.phase==='second') return endMod();
+  if(T.phase==='txt'){ T.phase=null; }
+  T.pts=[]; boxStart=null; refreshUI();
+}
+function closeShape(){
+  const P=T.pts; if(P.length<3) return;
+  if(T.id==='line'){const a=P[P.length-1],b=P[0]; addEnt({type:'line',x1:a[0],y1:a[1],x2:b[0],y2:b[1]});}
+  else addEnt({type:'pline',closed:true,pts:P.map(p=>[p[0],p[1]])});
+  T.pts=[]; refreshUI();
+}
+function cancel(){
+  if(T.id==='zoomw') return endZoomWin();
+  if(T.id==='select'){ if(boxStart) boxStart=null; else sel.clear(); return refreshUI(); }
+  const busy=T.pts.length||T.phase==='txt'||T.phase==='side'||(T.phase==='second'&&T.id!=='copy');
+  if(busy) setTool(T.id); else setTool('select');
+}
+function handleNumber(n){
+  if(T.id==='hatch'){ if(!(n>0)) return toast('比例必須大於 0'); doc.hatch.s=n; save(); return refreshUI(); }
+  if(T.id==='offset'&&T.phase==='dist'){ if(!(n>0)) return toast('偏移距離必須大於 0'); T.data.d=n; doc.offD=n; save(); T.phase='ent'; return refreshUI(); }
+  if(T.id==='circle'&&T.pts.length===1){ if(!(n>0)) return toast('半徑必須大於 0'); return addPoint([T.pts[0][0]+n,T.pts[0][1]]); }
+  if(T.phase==='second'&&T.id==='rotate'){ applyXf(rotXf(T.base,n*Math.PI/180),false); return endMod(); }
+  if(T.phase==='second'&&T.id==='scale'){ if(!(n>0)) return toast('比例必須大於 0'); applyXf(sclXf(T.base,n),false); return endMod(); }
+  if(!needsPoint()) return toast('目前步驟不需要數值');
+  const r=refPoint(); if(!r) return toast('請先指定第一點，或輸入座標，例如 0,0');
+  let dx=1,dy=0; if(cursor){const vx=cursor.x-r[0],vy=cursor.y-r[1],l=hyp(vx,vy); if(l>1e-9){dx=vx/l;dy=vy/l;}}
+  addPoint([r[0]+dx*n,r[1]+dy*n]);
+}
+const ALIAS={L:'line',LINE:'line',PL:'pline',PLINE:'pline',REC:'rect',RECT:'rect',RECTANG:'rect',C:'circle',CIRCLE:'circle',A:'arc',ARC:'arc',
+ T:'text',DT:'text',TEXT:'text',DIM:'dim',DAL:'dim',DLI:'dim',DI:'dist',DIST:'dist',H:'hatch',BH:'hatch',HATCH:'hatch',M:'move',MOVE:'move',CO:'copy',CP:'copy',COPY:'copy',
+ RO:'rotate',ROTATE:'rotate',SC:'scale',SCALE:'scale',MI:'mirror',MIRROR:'mirror',O:'offset',OFFSET:'offset',E:'erase',ERASE:'erase',DEL:'erase',SEL:'select',S:'select'};
+for(const [k,v] of Object.entries(TNAME)) ALIAS[v]=k;
+function parseInput(raw){
+  const s=raw.trim();
+  if(T.phase==='txt'){ if(!s){T.phase=null;T.pts=[];return refreshUI();} const p=T.pts[0];
+    addEnt({type:'text',x:p[0],y:p[1],h:doc.textH,s,rot:0}); T.phase=null; T.pts=[]; return refreshUI(); }
+  if(!s) return finish();
+  const N='(-?\\d*\\.?\\d+)'; let m;
+  if(T.id==='hatch'&&(m=s.match(/^[<＜]\s*(-?\d*\.?\d+)$/))){ doc.hatch.a=+m[1]; save(); return refreshUI(); }
+  if(T.id==='hatch'&&HPAT[s.toUpperCase()]){ doc.hatch.name=s.toUpperCase(); save(); return refreshUI(); }
+  if((m=s.match(new RegExp('^(@?)\\s*'+N+'\\s*[,，]\\s*'+N+'$')))){ let x=+m[2],y=+m[3]; if(m[1]){const r=refPoint()||lastPt||[0,0]; x+=r[0]; y+=r[1];}
+    return needsPoint()?addPoint([x,y]):toast('目前步驟不需要座標'); }
+  if((m=s.match(new RegExp('^(@?)\\s*'+N+'\\s*[<＜]\\s*'+N+'$')))){ const r=m[1]?(refPoint()||lastPt||[0,0]):[0,0],L=+m[2],a=+m[3]*Math.PI/180;
+    return needsPoint()?addPoint([r[0]+L*Math.cos(a),r[1]+L*Math.sin(a)]):toast('目前步驟不需要座標'); }
+  if(/^-?\d*\.?\d+$/.test(s)) return handleNumber(+s);
+  const U=s.toUpperCase();
+  if((U==='C'||U==='CLOSE'||s==='閉合')&&canClose()) return closeShape();
+  if(U==='U'||U==='UNDO') return undo();
+  if(U==='REDO') return redo();
+  if(U==='Z'||U==='ZE'||U==='ZOOM') return zoomExtents();
+  if(U==='ZW'||U==='ZOOMW') return startZoomWin();
+  if(U==='ZP'||U==='ZOOMP') return zoomPrev();
+  if(U==='XR'||U==='XREF') return openXref();
+  if(U==='LA'||U==='LAYER') return openLayers();
+  if(ALIAS[U]) return setTool(ALIAS[U]);
+  toast(`看不懂「${s}」，可輸入座標、數值或指令代碼（見選單說明）`);
+}
+
+/* ---------- 繪製 ---------- */
+function readTheme(){const cs=getComputedStyle(document.documentElement); for(const k of ['canvas','ink','grid','grid2','accent','snap','sel','x','y']) C[k]=cs.getPropertyValue('--c-'+k).trim(); C.panel=cs.getPropertyValue('--panel').trim(); C.muted=cs.getPropertyValue('--muted').trim();}
+function requestRender(){ if(!needDraw){needDraw=true; requestAnimationFrame(render);} }
+const mv=(x,y)=>{const s=w2s(x,y);ctx.moveTo(s[0],s[1]);}, ln=(x,y)=>{const s=w2s(x,y);ctx.lineTo(s[0],s[1]);};
+function drawText(t){
+  const px=t.h*view.z; if(px<1.2) return;
+  const b=textBox(t), [sx,sy]=w2s(t.x,t.y); ctx.save(); ctx.translate(sx,sy); ctx.rotate(-(t.rot||0)); if(t.wf&&t.wf!==1) ctx.scale(t.wf,1);
+  ctx.font=px+'px '+CFONT; ctx.textAlign=t.align||'left'; ctx.textBaseline='alphabetic';
+  b.lines.forEach((l,k)=>ctx.fillText(l,0,-(b.first-k*LS*t.h)*view.z)); ctx.restore();
+}
+function drawEnt(e,col,opt){
+  opt=opt||{}; ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=opt.lw||1.3; ctx.setLineDash(opt.dash||[]);
+  switch(e.type){
+    case 'line': ctx.beginPath(); mv(e.x1,e.y1); ln(e.x2,e.y2); ctx.stroke(); break;
+    case 'pline': ctx.beginPath(); e.pts.forEach((p,i)=>i?ln(p[0],p[1]):mv(p[0],p[1])); if(e.closed) ctx.closePath(); ctx.stroke(); break;
+    case 'circle': {const [sx,sy]=w2s(e.cx,e.cy); ctx.beginPath(); ctx.arc(sx,sy,e.r*view.z,0,TAU); ctx.stroke(); break;}
+    case 'arc': {const [sx,sy]=w2s(e.cx,e.cy); ctx.beginPath(); ctx.arc(sx,sy,e.r*view.z,-e.a1,-e.a2,true); ctx.stroke(); break;}
+    case 'text': drawText(e); break;
+    case 'hatch': drawHatch(e,col,opt); break;
+    case 'dim': {const g=dimGeom(e); ctx.beginPath(); for(const s of g.lines){mv(s[0],s[1]);ln(s[2],s[3]);} ctx.stroke(); ctx.setLineDash([]);
+      for(const a of g.arrows){ctx.beginPath(); mv(...a[0]); ln(...a[1]); ln(...a[2]); ctx.closePath(); ctx.fill();} drawText(g.text); break;}
+  }
+  ctx.setLineDash([]);
+}
+function drawGrid(){
+  const st=gridStep(), [x0,y1]=s2w(0,0), [x1,y0]=s2w(W,H);
+  for(const pass of [0,1]){
+    const step=pass?st*5:st; ctx.strokeStyle=pass?C.grid2:C.grid; ctx.lineWidth=1; ctx.beginPath();
+    for(let x=Math.floor(x0/step)*step;x<=x1;x+=step){const s=Math.round(w2s(x,0)[0])+.5; ctx.moveTo(s,0); ctx.lineTo(s,H);}
+    for(let y=Math.floor(y0/step)*step;y<=y1;y+=step){const s=Math.round(w2s(0,y)[1])+.5; ctx.moveTo(0,s); ctx.lineTo(W,s);}
+    ctx.stroke();
+  }
+  const [ox,oy]=w2s(0,0); ctx.lineWidth=1;
+  ctx.strokeStyle=C.x; ctx.globalAlpha=.35; ctx.beginPath(); ctx.moveTo(0,oy); ctx.lineTo(W,oy); ctx.stroke();
+  ctx.strokeStyle=C.y; ctx.beginPath(); ctx.moveTo(ox,0); ctx.lineTo(ox,H); ctx.stroke(); ctx.globalAlpha=1;
+}
+function drawUCS(){
+  let [ox,oy]=w2s(0,0); const inView=ox>20&&ox<W-50&&oy>50&&oy<H-20; if(!inView){ox=22;oy=H-22;}
+  ctx.lineWidth=2; ctx.font='600 11px '+CFONT;
+  ctx.strokeStyle=ctx.fillStyle=C.x; ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(ox+32,oy); ctx.lineTo(ox+26,oy-4); ctx.moveTo(ox+32,oy); ctx.lineTo(ox+26,oy+4); ctx.stroke(); ctx.fillText('X',ox+36,oy+4);
+  ctx.strokeStyle=ctx.fillStyle=C.y; ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(ox,oy-32); ctx.lineTo(ox-4,oy-26); ctx.moveTo(ox,oy-32); ctx.lineTo(ox+4,oy-26); ctx.stroke(); ctx.fillText('Y',ox-3,oy-37);
+}
+function drawDot(p){const [sx,sy]=w2s(p[0],p[1]); ctx.fillStyle=C.accent; ctx.beginPath(); ctx.arc(sx,sy,3,0,TAU); ctx.fill();}
+function drawPreview(){
+  const c=cursor?[cursor.x,cursor.y]:null, P=T.pts, last=P[P.length-1];
+  const ghost=o=>drawEnt(o,C.accent,{lw:1.6});
+  const helper=(a,b)=>{ctx.strokeStyle=C.accent; ctx.lineWidth=1; ctx.setLineDash([5,4]); ctx.beginPath(); mv(a[0],a[1]); ln(b[0],b[1]); ctx.stroke(); ctx.setLineDash([]);};
+  P.forEach(drawDot); if(T.base) drawDot(T.base);
+  if(boxStart&&c){const [ax,ay]=w2s(...boxStart),[bx,by]=w2s(...c),cross=c[0]<boxStart[0];
+    ctx.fillStyle=cross?'rgba(60,170,90,.12)':'rgba(60,110,220,.12)'; ctx.strokeStyle=cross?C.y:C.sel; ctx.setLineDash(cross?[6,4]:[]); ctx.lineWidth=1;
+    ctx.fillRect(ax,ay,bx-ax,by-ay); ctx.strokeRect(ax,ay,bx-ax,by-ay); ctx.setLineDash([]);}
+  if(boxStart&&!c) drawDot(boxStart);
+  if(T.id==='offset'&&T.data.ent){const e=doc.ents.find(x=>x.id===T.data.ent); if(e) drawEnt(e,C.sel,{lw:2,dash:[6,4]}); if(e&&c&&T.phase==='side'){const o=offsetEnt(e,c,T.data.d); if(o) ghost(o);}}
+  if(!c) return;
+  switch(T.id){
+    case 'line': case 'dist': if(last) ghost({type:'line',x1:last[0],y1:last[1],x2:c[0],y2:c[1]}); break;
+    case 'pline': if(P.length) ghost({type:'pline',pts:[...P,c]}); break;
+    case 'rect': if(last) ghost({type:'pline',closed:true,pts:[[last[0],last[1]],[c[0],last[1]],[c[0],c[1]],[last[0],c[1]]]}); break;
+    case 'zoomw': if(last){ const [ax,ay]=w2s(...last),[bx,by]=w2s(...c); ctx.strokeStyle=C.accent; ctx.lineWidth=1.5; ctx.setLineDash([6,4]); ctx.strokeRect(ax,ay,bx-ax,by-ay); ctx.setLineDash([]); } break;
+    case 'circle': if(last){ghost({type:'circle',cx:last[0],cy:last[1],r:D2(last,c)}); helper(last,c);} break;
+    case 'arc': if(P.length===1) helper(last,c); if(P.length===2){const a=arc3(P[0],P[1],c); if(a) ghost(a);} break;
+    case 'dim': if(P.length===1) helper(last,c); if(P.length===2&&D2(P[0],P[1])>1e-9) ghost({type:'dim',x1:P[0][0],y1:P[0][1],x2:P[1][0],y2:P[1][1],ox:c[0],oy:c[1],h:doc.textH*0.8}); break;
+    case 'move': case 'copy': case 'rotate': case 'mirror': if(T.phase==='second'){const xf=modXf(c); if(xf) for(const e of selEnts()) ghost(transformEnt(e,xf.f,xf.o)); helper(T.base,c);} break;
+  }
+}
+function drawCursor(){
+  if(!cursor) return; const [sx,sy]=w2s(cursor.x,cursor.y);
+  ctx.lineWidth=1; ctx.strokeStyle=C.ink; ctx.globalAlpha=.7;
+  if(needsPoint()){ ctx.beginPath(); ctx.moveTo(sx-22,sy); ctx.lineTo(sx+22,sy); ctx.moveTo(sx,sy-22); ctx.lineTo(sx,sy+22); ctx.stroke(); }
+  else ctx.strokeRect(sx-5,sy-5,10,10);
+  ctx.globalAlpha=1;
+  if(cursor.k&&needsPoint()){
+    const k=cursor.k,r=7; ctx.strokeStyle=C.snap; ctx.lineWidth=2; ctx.beginPath();
+    if(k==='end'||k==='ins') ctx.rect(sx-r,sy-r,2*r,2*r);
+    else if(k==='mid'){ctx.moveTo(sx,sy-r-1);ctx.lineTo(sx+r+1,sy+r);ctx.lineTo(sx-r-1,sy+r);ctx.closePath();}
+    else if(k==='cen') ctx.arc(sx,sy,r,0,TAU);
+    else if(k==='quad'){ctx.moveTo(sx,sy-r-1);ctx.lineTo(sx+r+1,sy);ctx.lineTo(sx,sy+r+1);ctx.lineTo(sx-r-1,sy);ctx.closePath();}
+    else if(k==='int'){ctx.moveTo(sx-r,sy-r);ctx.lineTo(sx+r,sy+r);ctx.moveTo(sx+r,sy-r);ctx.lineTo(sx-r,sy+r);}
+    else if(k==='grid'){ctx.lineWidth=1.5;ctx.moveTo(sx-4,sy);ctx.lineTo(sx+4,sy);ctx.moveTo(sx,sy-4);ctx.lineTo(sx,sy+4);}
+    ctx.stroke();
+    if(k!=='grid') tag(SNAPNAME[k],sx+12,sy-12,C.snap);
+  }
+  const r=needsPoint()?refPoint():null;
+  if(r){const dx=cursor.x-r[0],dy=cursor.y-r[1]; if(hyp(dx,dy)>1e-9) tag(`${fmt(hyp(dx,dy))} ∠${fmt(normA(Math.atan2(dy,dx))*180/Math.PI,1)}°`,sx+14,sy+26,C.accent);}
+}
+function tag(s,x,y,col){ctx.font='500 11px "JetBrains Mono",monospace'; const w=ctx.measureText(s).width+10; x=Math.min(x,W-w-4); y=Math.max(16,Math.min(y,H-6));
+  ctx.fillStyle=C.panel; ctx.globalAlpha=.92; ctx.fillRect(x,y-13,w,18); ctx.globalAlpha=1; ctx.strokeStyle=col; ctx.lineWidth=1; ctx.strokeRect(x+.5,y-12.5,w-1,17); ctx.fillStyle=col; ctx.fillText(s,x+5,y);}
+/* ---------- 繪製：底圖快取 ----------
+   底圖（外部參考與唯讀大圖，可能數十萬個物件）先畫進離屏畫布：
+   手勢進行中只把這張圖平移縮放；停下後再分段（每格約 12 毫秒）重畫新視圖，畫完才換上，畫面不會凍結。
+   你畫的物件（doc.ents）每格直接畫在上面。 */
+const SC={front:document.createElement('canvas'),back:document.createElement('canvas'),fv:null,fkey:'',bv:null,bkey:'',it:null,lastMove:0};
+const markMove=()=>{ SC.lastMove=performance.now(); };
+function sceneKey(){ let s=XSV+'|'+C.canvas+'|'+C.ink+'|'+doc.layers.length; for(const l of doc.layers) s+=(l.on===false?'0':'1')+l.color; return s; }
+function* sceneGen(){
+  ctx.setTransform(DPR,0,0,DPR,0,0); ctx.fillStyle=C.canvas; ctx.fillRect(0,0,W,H); drawGrid();
+  const [vx0,vy1]=s2w(0,0),[vx1,vy0]=s2w(W,H),tiny=0.6/view.z; let k=0, c=0;
+  /* 每畫 300 個、或每檢查 2 萬個（放大時多數在畫面外）就讓出一次，手機也不會卡住 */
+  for(const pass of [0,1]) for(const e of XS.ents){
+    if(++c%20000===0) yield;
+    if((e.type==='hatch')!==(pass===0)||!visible(e)) continue;
+    const b=bbC(e); if(b[2]<vx0||b[0]>vx1||b[3]<vy0||b[1]>vy1||(b[2]-b[0]<tiny&&b[3]-b[1]<tiny)) continue;
+    drawEnt(e,entColor(e),null); if(++k%300===0) yield;
+  }
+}
+function blitScene(src,sv){ /* 把以 sv 視圖畫好的底圖，對應到目前視圖 */
+  const k=view.z/sv.z, dx=W/2-W/2*k+(sv.x-view.x)*view.z, dy=H/2-H/2*k-(sv.y-view.y)*view.z;
+  ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(src,dx*DPR,dy*DPR,cv.width*k,cv.height*k); ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+function render(){
+  needDraw=false; if(!W) return;
+  for(const c of [SC.front,SC.back]) if(c.width!==cv.width||c.height!==cv.height){ c.width=cv.width; c.height=cv.height; SC.fv=null; SC.bv=null; SC.it=null; }
+  const v={x:view.x,y:view.y,z:view.z}, key=sceneKey(), now=performance.now();
+  const moving=now-SC.lastMove<160||!!(G&&(G.type==='pinch'||G.type==='pan'||(G.type==='tap'&&G.moved)));
+  const frontOk=SC.fv&&SC.fkey===key&&sameView(SC.fv,v);
+  if(moving) SC.it=null;
+  else if(!frontOk){
+    if(!(SC.it&&SC.bkey===key&&sameView(SC.bv,v))){ SC.bv=v; SC.bkey=key; SC.it=sceneGen(); SC.first=true; }
+    const main=ctx; ctx=SC.back.getContext('2d'); const t0=performance.now(); let done=false;
+    try{ do{ if(SC.it.next().done){done=true;break;} }while(performance.now()-t0<12); }finally{ ctx=main; }
+    if(done){ const t=SC.front; SC.front=SC.back; SC.back=t; SC.fv=SC.bv; SC.fkey=SC.bkey; SC.it=null; }
+  }
+  /* 合成：完整底圖 → 舊底圖平移縮放 → 第一次則邊畫邊顯示 */
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  if(SC.fv&&SC.fkey===key&&sameView(SC.fv,v)){ ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(SC.front,0,0); ctx.setTransform(DPR,0,0,DPR,0,0); }
+  else { ctx.fillStyle=C.canvas; ctx.fillRect(0,0,W,H);
+    if(SC.fv) blitScene(SC.front,SC.fv);
+    else if(SC.it&&SC.bv&&sameView(SC.bv,v)){ ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(SC.back,0,0); ctx.setTransform(DPR,0,0,DPR,0,0); }
+    else drawGrid(); }
+  /* 你畫的物件：每格直接畫（只畫畫面內、大於半個像素的） */
+  const [vx0,vy1]=s2w(0,0),[vx1,vy0]=s2w(W,H),tiny=0.6/view.z;
+  for(const pass of [0,1]) for(const e of doc.ents){ if((e.type==='hatch')!==(pass===0)||!visible(e)) continue; const s=sel.has(e.id);
+    const b=bbC(e); if(b[2]<vx0||b[0]>vx1||b[3]<vy0||b[1]>vy1) continue; if(!s&&b[2]-b[0]<tiny&&b[3]-b[1]<tiny) continue;
+    drawEnt(e,s?C.sel:entColor(e),s?{lw:2.2,dash:[7,4]}:null); }
+  drawPreview(); drawUCS(); drawCursor();
+  if(SC.it||moving) requestRender();
+}
+
+/* ---------- 指標輸入 ---------- */
+function updateCursor(sx,sy,touch){
+  const oy=(touch&&settings.offset&&needsPoint())?-72:0; let w=s2w(sx,sy+oy), k=null;
+  if(needsPoint()&&T.id!=='zoomw'){
+    const sn=findSnap(w,(touch?22:12)/view.z);
+    if(sn){w=[sn.x,sn.y];k=sn.k;}
+    else{
+      const r=refPoint(), st=gridStep();
+      if(settings.ortho&&r){ if(Math.abs(w[0]-r[0])>=Math.abs(w[1]-r[1])){w[1]=r[1]; if(settings.grid){w[0]=r[0]+Math.round((w[0]-r[0])/st)*st;k='grid';}}
+        else {w[0]=r[0]; if(settings.grid){w[1]=r[1]+Math.round((w[1]-r[1])/st)*st;k='grid';}} }
+      else if(settings.grid){w=[Math.round(w[0]/st)*st,Math.round(w[1]/st)*st];k='grid';}
+    }
+  }
+  cursor={x:w[0],y:w[1],k}; updateStatus(); requestRender();
+}
+const ptrs=new Map(); let G=null, spaceDown=false;
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('pointerdown',ev=>{
+  ev.preventDefault(); try{cv.setPointerCapture(ev.pointerId);}catch(_){}
+  if(document.activeElement===$('#cmdIn')&&ev.pointerType!=='mouse'&&T.phase!=='txt') $('#cmdIn').blur();
+  const p={x:ev.offsetX,y:ev.offsetY}; ptrs.set(ev.pointerId,p);
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()]; G={type:'pinch',d0:hyp(a.x-b.x,a.y-b.y)||1,z0:view.z,wm:s2w((a.x+b.x)/2,(a.y+b.y)/2),v0:(G&&G.v0)||{x:view.x,y:view.y,z:view.z}}; return;}
+  if(ptrs.size>2) return;
+  if(ev.pointerType==='mouse'){
+    if(ev.button===2){G={type:'none'}; finish(); return;}
+    if(ev.button===1||spaceDown){G={type:'pan',sx0:p.x,sy0:p.y,vx0:view.x,vy0:view.y,v0:{x:view.x,y:view.y,z:view.z}}; return;}
+  }
+  const touch=ev.pointerType!=='mouse';
+  if(needsPoint()){G={type:'aim',touch}; updateCursor(p.x,p.y,touch);}
+  else G={type:'tap',sx0:p.x,sy0:p.y,vx0:view.x,vy0:view.y,moved:false,touch,v0:{x:view.x,y:view.y,z:view.z}};
+});
+cv.addEventListener('pointermove',ev=>{
+  const p={x:ev.offsetX,y:ev.offsetY}; if(ptrs.has(ev.pointerId)) ptrs.set(ev.pointerId,p);
+  if(!G){ if(ev.pointerType==='mouse') updateCursor(p.x,p.y,false); return; }
+  if(G.type==='pinch'){ if(ptrs.size<2) return; const [a,b]=[...ptrs.values()],mx=(a.x+b.x)/2,my=(a.y+b.y)/2,z=clampZ(G.z0*hyp(a.x-b.x,a.y-b.y)/G.d0);
+    view.z=z; view.x=G.wm[0]-(mx-W/2)/z; view.y=G.wm[1]+(my-H/2)/z; markMove(); requestRender(); return; }
+  if(G.type==='tap'||G.type==='pan'){
+    if(G.type==='tap'&&!G.moved&&hyp(p.x-G.sx0,p.y-G.sy0)>8) G.moved=true;
+    if(G.type==='pan'||G.moved){view.x=G.vx0-(p.x-G.sx0)/view.z; view.y=G.vy0+(p.y-G.sy0)/view.z; markMove(); requestRender();}
+    if(ev.pointerType==='mouse') updateCursor(p.x,p.y,false); return;
+  }
+  if(G.type==='aim') updateCursor(p.x,p.y,G.touch);
+});
+function pUp(ev,cancelled){
+  ptrs.delete(ev.pointerId); if(!G) return;
+  const v0=G.v0, viewChanged=()=>v0&&!sameView(v0,{x:view.x,y:view.y,z:view.z});
+  if(G.type==='pinch'){ if(viewChanged()) pushView(v0); G=ptrs.size?{type:'dead'}:null; return;}
+  if(G.type==='dead'||G.type==='none'){ if(!ptrs.size) G=null; return; }
+  if(ptrs.size) return;
+  const g=G; G=null; if((g.type==='pan'||(g.type==='tap'&&g.moved))&&viewChanged()) pushView(v0); if(cancelled) return;
+  if(g.type==='aim'&&cursor) addPoint([cursor.x,cursor.y]);
+  else if(g.type==='tap'&&!g.moved) tapAt(ev.offsetX,ev.offsetY,g.touch);
+  requestRender();
+}
+cv.addEventListener('pointerup',e=>pUp(e,false));
+cv.addEventListener('pointercancel',e=>pUp(e,true));
+cv.addEventListener('pointerleave',e=>{ if(e.pointerType==='mouse'&&!G){cursor=null; requestRender();} });
+let lastWheel=0;
+cv.addEventListener('wheel',ev=>{ev.preventDefault(); const now=performance.now(); if(now-lastWheel>500) pushView(); lastWheel=now; zoomAt(ev.offsetX,ev.offsetY,Math.exp(-ev.deltaY*0.0015));},{passive:false});
+function zoomAt(sx,sy,f){markMove(); const w=s2w(sx,sy); view.z=clampZ(view.z*f); view.x=w[0]-(sx-W/2)/view.z; view.y=w[1]+(sy-H/2)/view.z; requestRender();}
+
+/* 視圖記錄：每次縮放／平移前記下目前視圖，「返回」就回到上一個 */
+const vHist=[];
+const sameView=(a,b)=>a&&b&&a.x===b.x&&a.y===b.y&&a.z===b.z;
+function pushView(v){ v=v||{x:view.x,y:view.y,z:view.z}; if(sameView(vHist[vHist.length-1],v)) return; vHist.push(v); if(vHist.length>60) vHist.shift(); updZoomBar(); }
+function zoomPrev(){ const v=vHist.pop(); if(!v){ toast('沒有上一個視圖'); return; } view.x=v.x; view.y=v.y; view.z=v.z; requestRender(); updZoomBar(); }
+function zoomStep(f){ pushView(); zoomAt(W/2,H/2,f); }
+function zoomToBox(a,b){ const w=Math.abs(b[0]-a[0]),h=Math.abs(b[1]-a[1]); if(w*view.z<4&&h*view.z<4){ toast('範圍太小，請拉開對角點'); return; }
+  pushView(); view.x=(a[0]+b[0])/2; view.y=(a[1]+b[1])/2; view.z=clampZ(Math.min(W/Math.max(w,1e-9),H/Math.max(h,1e-9))*0.92); requestRender(); }
+function startZoomWin(){ if(T.id==='zoomw') return cancel(); const prev=T; T={id:'zoomw',pts:[],phase:null,base:null,data:{prevT:prev}}; boxStart=null; refreshUI(); }
+function endZoomWin(){ const prev=T.data.prevT; T=prev&&prev.id!=='zoomw'?prev:{id:'select',pts:[],phase:null,base:null,data:{}}; refreshUI(); }
+function updZoomBar(){ const p=$('#zPrev'); if(p) p.disabled=!vHist.length; const z=$('#zWin'); if(z) z.setAttribute('aria-pressed',String(T.id==='zoomw')); }
+$('#zIn').addEventListener('click',()=>zoomStep(1.6));
+$('#zOut').addEventListener('click',()=>zoomStep(1/1.6));
+$('#zWin').addEventListener('click',startZoomWin);
+$('#zPrev').addEventListener('click',zoomPrev);
+function tapAt(sx,sy,touch){
+  const w=s2w(sx,sy), tol=(touch?22:10)/view.z;
+  if(T.id==='offset'&&T.phase==='ent'){ const e=hitEnt(w,tol,['line','circle','arc','pline']);
+    if(e){T.data.ent=e.id; T.phase='side';} else toast('請點選直線、圓、圓弧或聚合線'); return refreshUI(); }
+  if(T.id==='hatch'){ const H=doc.hatch, loops=findRegion(w);
+    if(!loops) return toast('這裡找不到封閉邊界，請確認線段頭尾相接');
+    addEnt({type:'hatch',name:H.name,solid:H.name==='SOLID',loops,pat:makePat(H.name,H.s,H.a*Math.PI/180)});
+    return toast(`已填充（${HPAT[H.name].n}${loops.length>1?`，含 ${loops.length-1} 個島`:''}）`); }
+  if(T.id==='select'||T.phase==='pick'){
+    if(boxStart){ boxSelect(boxStart,w); boxStart=null; return refreshUI(); }
+    const e=hitEnt(w,tol); if(e){ sel.has(e.id)?sel.delete(e.id):sel.add(e.id); } else boxStart=w;
+    cursor=null; refreshUI();
+  }
+}
+function boxSelect(a,b){
+  const x0=Math.min(a[0],b[0]),x1=Math.max(a[0],b[0]),y0=Math.min(a[1],b[1]),y1=Math.max(a[1],b[1]),cross=b[0]<a[0]; let n=0;
+  for(const e of doc.ents){ if(!visible(e)) continue; const bb=bbox(e);
+    const inside=bb[0]>=x0&&bb[2]<=x1&&bb[1]>=y0&&bb[3]<=y1, inter=bb[0]<=x1&&bb[2]>=x0&&bb[1]<=y1&&bb[3]>=y0;
+    if(cross?inter:inside){ if(!sel.has(e.id)) n++; sel.add(e.id);} }
+  toast(`${cross?'框交':'框選'}加入 ${n} 個物件`);
+}
+/* 縮放至全圖：物件多時忽略離主圖很遠的零星物件（實務圖面常有遺留的點或文字），以免主圖被縮得太小 */
+function zoomExtents(noHist){
+  if(noHist) vHist.length=0; else if(W) pushView();
+  const B=[]; for(const list of [doc.ents,XS.ents]) for(const e of list){ if(!visible(e)) continue; const b=bbC(e); if(isFinite(b[0])&&isFinite(b[3])) B.push(b); }
+  if(!B.length){view.x=50;view.y=50;view.z=clampZ(Math.min(W,H)/150);return requestRender();}
+  let keep=B;
+  if(B.length>=50){
+    const cx=B.map(b=>(b[0]+b[2])/2).sort((a,b)=>a-b), cy=B.map(b=>(b[1]+b[3])/2).sort((a,b)=>a-b);
+    const q=(a,p)=>a[Math.min(a.length-1,Math.max(0,Math.round(p*(a.length-1))))];
+    const qx0=q(cx,.01),qx1=q(cx,.99),qy0=q(cy,.01),qy1=q(cy,.99),mx=Math.max(qx1-qx0,1e-9)*.5,my=Math.max(qy1-qy0,1e-9)*.5;
+    keep=B.filter(b=>{const x=(b[0]+b[2])/2,y=(b[1]+b[3])/2; return x>=qx0-mx&&x<=qx1+mx&&y>=qy0-my&&y<=qy1+my;});
+    if(!keep.length) keep=B;
+  }
+  let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  for(const b of keep){ x0=Math.min(x0,b[0]);y0=Math.min(y0,b[1]);x1=Math.max(x1,b[2]);y1=Math.max(y1,b[3]); }
+  const w=Math.max(x1-x0,1),h=Math.max(y1-y0,1); view.x=(x0+x1)/2; view.y=(y0+y1)/2;
+  view.z=clampZ(Math.min((W-48)/w,(H-140)/h)); requestRender();
+}
+
+/* ---------- 介面 ---------- */
+let toastT=0;
+function toast(s,ms){const t=$('#toast'); t.textContent=s; t.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),ms||2600);}
+function promptText(){
+  const n=T.pts.length;
+  switch(T.id){
+    case 'select': return boxStart?'點選對角點完成框選（往左拉為框交）':(sel.size?`已選取 ${sel.size} 個物件，可按下方工具修改`:'點物件選取・點空白處開始框選・拖曳平移・雙指縮放');
+    case 'line': return n?'指定下一點，或輸入長度、@x,y、@長度<角度':'指定直線起點';
+    case 'pline': return n?'指定下一點，按 ✓ 完成或「閉合」':'指定聚合線起點';
+    case 'rect': return n?'指定對角點，或輸入 @寬,高':'指定矩形第一個角點';
+    case 'circle': return n?'指定半徑點，或輸入半徑':'指定圓心';
+    case 'arc': return ['指定圓弧起點','指定圓弧上的第二點','指定圓弧終點'][n];
+    case 'text': return T.phase==='txt'?'在下方指令列輸入文字，按 Enter 放置':`指定文字左下角起點（字高 ${fmt(doc.textH)}）`;
+    case 'dim': return ['指定第一條延伸線原點','指定第二條延伸線原點','指定尺寸線位置'][n];
+    case 'dist': return n?'指定第二點':'指定量測第一點';
+    case 'zoomw': return n?'點選對角點，放大這個範圍':'點選要放大範圍的第一個角點';
+    case 'hatch': {const H=doc.hatch; return `點選封閉區域內部即填充（${HPAT[H.name].n}${H.name==='SOLID'?'':`・比例 ${fmt(H.s)}・角度 ${fmt(H.a)}°`}）。輸入數字改比例，<角度 改角度`;}
+    case 'offset': return T.phase==='dist'?`輸入偏移距離${doc.offD?`，或按 ✓ 沿用 ${fmt(doc.offD)}`:''}`:T.phase==='ent'?`點選要偏移的物件（距離 ${fmt(T.data.d)}）`:'點選要偏移到的那一側';
+  }
+  if(T.phase==='pick') return boxStart?'點選對角點完成框選':'點選要修改的物件，完成後按 ✓';
+  if(T.phase==='base') return {move:'指定基準點',copy:'指定基準點',rotate:'指定旋轉中心',scale:'指定縮放基準點',mirror:'指定鏡射線第一點'}[T.id];
+  return {move:'指定目的點',copy:'指定目的點，可連續複製，按 ✓ 結束',rotate:'指定方向點，或輸入角度（逆時針為正）',scale:'在指令列輸入比例，例如 2 或 0.5',mirror:'指定鏡射線第二點（保留原物件）'}[T.id]||'';
+}
+function refreshUI(){
+  document.querySelectorAll('.tool').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.t===T.id)));
+  $('#prompt').innerHTML=`<b>${TNAME[T.id]}</b>${esc(promptText())}`;
+  const box=$('#ctx'); box.innerHTML=''; const B=(label,fn,cls)=>{const b=document.createElement('button'); b.textContent=label; if(cls) b.className=cls; b.addEventListener('click',fn); box.appendChild(b);};
+  if(T.id==='select'){
+    if(boxStart) B('取消框選',cancel);
+    if(sel.size){ B('移到目前圖層',moveToLayer); B('取消選取',()=>{sel.clear();refreshUI();}); B(`刪除 ${sel.size}`,doErase,'primary'); }
+  } else {
+    if(T.id==='hatch'){ B('圖樣：'+HPAT[doc.hatch.name].n,()=>{doc.hatch.name=HORDER[(HORDER.indexOf(doc.hatch.name)+1)%HORDER.length]; save(); refreshUI();},'primary'); }
+    if(canClose()) B('閉合',closeShape);
+    if(canFinish()) B('✓ 完成',finish,'primary');
+    B('✕ 取消',cancel);
+  }
+  const L=doc.layers[doc.cur]||doc.layers[0]; $('#lName').textContent=L.name; $('#lSw').style.background=L.color==='auto'?C.ink:L.color;
+  $('#bUndo').disabled=!undoStack.length; $('#bRedo').disabled=!redoStack.length;
+  $('#cSnap').setAttribute('aria-pressed',settings.osnap); $('#cGrid').setAttribute('aria-pressed',settings.grid);
+  $('#cOrtho').setAttribute('aria-pressed',settings.ortho); $('#cOff').setAttribute('aria-pressed',settings.offset);
+  updZoomBar(); const xb=$('#mXref'); if(xb){ const miss=XS.xrefs.filter(x=>!x.loaded&&x.inserts.length).length; xb.textContent=miss?`外部參考（${miss} 個未載入）`:'外部參考'; }
+  $('#cmdIn').placeholder=T.id==='hatch'?'比例，如 2 ・ <45 改角度':T.phase==='txt'?'輸入文字內容':(T.phase==='dist'||(T.phase==='second'&&(T.id==='scale'||T.id==='rotate')))?'輸入數值':'100,50 ・ @30<45 ・ L';
+  updateStatus(); requestRender();
+}
+function updateStatus(){
+  let s=cursor?`X ${fmt(cursor.x)}  Y ${fmt(cursor.y)}`:'X —  Y —';
+  $('#coord').textContent=s+`  ・ ${doc.ents.length} 物件`+(XS.ents.length?`＋參考 ${XS.ents.length}`:'');
+}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function focusCmd(force){const i=$('#cmdIn'); if(force||matchMedia('(pointer:fine)').matches) i.focus();}
+function moveToLayer(){ if(!sel.size) return toast('請先選取物件'); const n=sel.size; edit(()=>{for(const e of selEnts()) e.layer=doc.cur;}); toast(`已將 ${n} 個物件移到「${doc.layers[doc.cur].name}」`); }
+
+/* 圖層面板 */
+function hexOf(c){ return c==='auto'?(C.ink||'#000000'):c; }
+function renderLayers(){
+  const list=$('#lList'); list.innerHTML='';
+  /* 一次算好每個圖層的物件數（圖層多、物件多時逐層篩選會卡住） */
+  const CN=new Array(doc.layers.length).fill(0), XN=new Array(doc.layers.length).fill(0);
+  for(const e of doc.ents) CN[e.layer]=(CN[e.layer]||0)+1; for(const e of XS.ents) XN[e.layer]=(XN[e.layer]||0)+1;
+  doc.layers.forEach((L,i)=>{
+    const cnt=CN[i]||0, xcnt=XN[i]||0;
+    const row=document.createElement('div'); row.className='lrow';
+    row.innerHTML=`<input type="radio" name="curL" id="lr${i}" ${i===doc.cur?'checked':''} aria-label="設為目前圖層">
+      <input type="color" id="lc${i}" value="${hexOf(L.color)}" aria-label="圖層顏色">
+      <div style="min-width:0;display:flex;flex-direction:column;gap:2px"><input class="ln" id="ln${i}" value="${esc(L.name)}" aria-label="圖層名稱"><span class="cnt">${cnt} 個物件${L.color==='auto'?'・自動黑白':''}</span></div>
+      <button aria-label="${L.on?'隱藏':'顯示'}圖層" title="${L.on?'隱藏':'顯示'}"><svg class="i" viewBox="0 0 24 24">${L.on?'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>':'<path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3 3.6M6.6 6.6C3.8 8.4 2 12 2 12s4 7 10 7a9.6 9.6 0 0 0 4.4-1.1"/>'}</svg></button>
+      <button aria-label="刪除圖層" title="刪除"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button>`;
+    const [radio,color]=row.querySelectorAll('input'); const name=row.querySelector('.ln'); const [eye,del]=row.querySelectorAll('button');
+    radio.addEventListener('change',()=>{doc.cur=i; if(!L.on){L.on=true;} save(); renderLayers(); refreshUI();});
+    color.addEventListener('change',()=>{edit(()=>{L.color=color.value;}); renderLayers();});
+    name.addEventListener('change',()=>{const v=name.value.trim(); if(!v){name.value=L.name;return;} edit(()=>{L.name=v;});});
+    eye.addEventListener('click',()=>{ if(i===doc.cur&&L.on) return toast('目前圖層不能隱藏'); edit(()=>{L.on=!L.on;}); for(const e of selEnts()) if(!visible(e)) sel.delete(e.id); renderLayers(); refreshUI();});
+    del.addEventListener('click',()=>{
+      if(i===0) return toast('圖層 0 不能刪除'); if(cnt) return toast('圖層上還有物件，請先刪除或移走'); if(xcnt) return toast('這是外部參考的圖層，請先卸載該參考');
+      edit(()=>{doc.layers.splice(i,1); for(const e of doc.ents) if(e.layer>i) e.layer--; if(doc.cur>=i) doc.cur=Math.max(0,doc.cur-1);}); delete XS.layers[L.name]; relinkX(); renderLayers();
+    });
+    list.appendChild(row);
+  });
+}
+const PAL=['#d64545','#e09a2b','#3f9a5c','#2a9fb0','#3b6fd6','#9b55c9','#8a8f96'];
+function openLayers(){renderLayers(); $('#dLayers').showModal();}
+
+/* ---------- DXF ---------- */
+/* AutoCAD 索引色（ACI 1–255）依標準色相規則產生 */
+const ACIRGB=(()=>{const t=[];
+  Object.assign(t,{1:[255,0,0],2:[255,255,0],3:[0,255,0],4:[0,255,255],5:[0,0,255],6:[255,0,255],7:[255,255,255],8:[128,128,128],9:[192,192,192]});
+  const V=[1,1,.65,.65,.5,.5,.3,.3,.15,.15];
+  for(let i=10;i<250;i++){const h=(Math.floor(i/10)-1)*15,f=n=>{const k=(n+h/60)%6;return 1-Math.max(0,Math.min(k,4-k,1));};
+    t[i]=[f(5),f(3),f(1)].map(c=>Math.round(255*V[i%10]*(i%2?c+(1-c)*.5:c)));}
+  [51,91,132,173,214,255].forEach((g,k)=>t[250+k]=[g,g,g]); return t;})();
+const rgbHex=a=>'#'+a.map(v=>v.toString(16).padStart(2,'0')).join('');
+const aciHex=i=>(i===7||!ACIRGB[i])?'auto':rgbHex(ACIRGB[i]);
+function hexRGB(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+function toACI(c){ if(!c||c==='auto') return 7; const a=hexRGB(c); let best=7,bd=Infinity;
+  for(let k=1;k<256;k++){ if(k===7) continue; const b=ACIRGB[k],d=(a[0]-b[0])**2+(a[1]-b[1])**2+(a[2]-b[2])**2; if(d<bd){bd=d;best=k;}} return best; }
+/* 編碼：舊版 AutoCAD（R2004 以前）的繁中 DXF 是 Big5（ANSI_950），R2007 以後是 UTF-8 */
+const CPMAP={ANSI_950:'big5',ANSI_936:'gbk',ANSI_932:'shift_jis',ANSI_949:'euc-kr',ANSI_1361:'euc-kr',ANSI_1252:'windows-1252',ANSI_874:'windows-874',ANSI_1250:'windows-1250',ANSI_1251:'windows-1251'};
+const MBCP={1:'shift_jis',2:'big5',3:'euc-kr',4:'euc-kr',5:'gbk'};
+function tryDecode(u8,enc,fatal){try{return new TextDecoder(enc,{fatal:!!fatal}).decode(u8);}catch(_){return null;}}
+function decodeBytes(buf){
+  let u8=new Uint8Array(buf);
+  if(u8[0]===0xEF&&u8[1]===0xBB&&u8[2]===0xBF) return tryDecode(u8.subarray(3),'utf-8');
+  const head=tryDecode(u8.subarray(0,65536),'windows-1252')||'';
+  const ver=(head.match(/\$ACADVER\s*\r?\n\s*1\s*\r?\n\s*(AC\d{4})/i)||[])[1]||'';
+  const cp=((head.match(/\$DWGCODEPAGE\s*\r?\n\s*3\s*\r?\n\s*(\S+)/i)||[])[1]||'').toUpperCase();
+  const legacy=ver&&ver.toUpperCase()<'AC1021', cpEnc=CPMAP[cp];
+  if(legacy&&cpEnc&&cpEnc!=='windows-1252'){const s=tryDecode(u8,cpEnc); if(s!==null) return s;}
+  /* AutoCAD 2007 以後的 DXF 規定為 UTF-8；延伸資料偶有壞位元組，容錯解碼即可 */
+  if(ver&&!legacy){const s=tryDecode(u8,'utf-8'); if(s!==null) return s;}
+  const utf=tryDecode(u8,'utf-8',true); if(utf!==null) return utf;
+  for(const enc of [cpEnc,'big5','gbk'].filter(Boolean)){const s=tryDecode(u8,enc,true); if(s!==null) return s;}
+  return tryDecode(u8,cpEnc||'big5')||tryDecode(u8,'utf-8');
+}
+function unesc(s){
+  if(s.indexOf('\\')<0) return s;
+  return s.replace(/\\U\+([0-9A-Fa-f]{4,5})/g,(_,h)=>String.fromCodePoint(parseInt(h,16)))
+          .replace(/\\M\+([1-5])([0-9A-Fa-f]{4})/g,(_,n,h)=>tryDecode(new Uint8Array([parseInt(h.slice(0,2),16),parseInt(h.slice(2),16)]),MBCP[n])||'?');
+}
+const dxfStr=s=>String(s).replace(/[^\x20-\x7e]/gu,ch=>'\\U+'+ch.codePointAt(0).toString(16).toUpperCase().padStart(4,'0'));
+function toDXF(){
+  const o=[],p=(c,v)=>o.push(String(c),typeof v==='number'?String(+v.toFixed(6)):dxfStr(v));
+  const lname=i=>(doc.layers[i]||doc.layers[0]).name;
+  p(0,'SECTION');p(2,'HEADER');p(9,'$ACADVER');p(1,'AC1009');p(9,'$DWGCODEPAGE');p(3,'ANSI_950');p(9,'$INSUNITS');p(70,4);p(0,'ENDSEC');
+  p(0,'SECTION');p(2,'TABLES');p(0,'TABLE');p(2,'LTYPE');p(70,1);p(0,'LTYPE');p(2,'CONTINUOUS');p(70,0);p(3,'Solid line');p(72,65);p(73,0);p(40,0);p(0,'ENDTAB');
+  p(0,'TABLE');p(2,'LAYER');p(70,doc.layers.length);
+  for(const L of doc.layers){p(0,'LAYER');p(2,L.name);p(70,0);p(62,(L.on?1:-1)*toACI(L.color));p(6,'CONTINUOUS');}
+  p(0,'ENDTAB');p(0,'ENDSEC');
+  p(0,'SECTION');p(2,'ENTITIES');
+  const head=(t,l,e)=>{p(0,t);p(8,l); if(e&&e.color) p(62,toACI(e.color));};
+  const line=(l,e,x1,y1,x2,y2)=>{head('LINE',l,e);p(10,x1);p(20,y1);p(30,0);p(11,x2);p(21,y2);p(31,0);};
+  const text=(l,e,t)=>{ const b=textBox(t),c=Math.cos(t.rot||0),s=Math.sin(t.rot||0),ha={left:0,center:1,right:2}[t.align||'left'];
+    b.lines.forEach((ln,k)=>{ if(!ln) return; const v=b.first-k*LS*t.h, x=t.x-v*s, y=t.y+v*c;
+      head('TEXT',l,e);p(10,x);p(20,y);p(30,0);p(40,t.h);p(1,ln);p(50,(t.rot||0)*180/Math.PI); if(t.wf&&t.wf!==1) p(41,t.wf);
+      if(ha){p(72,ha);p(11,x);p(21,y);p(31,0);} });};
+  /* 已載入的外部參考也一併輸出（R12 沒有外部參考，等同併入） */
+  /* 已載入的外部參考也一併輸出（R12 沒有外部參考，等同併入）；超過上限時手機產生不了這麼大的檔，只輸出你畫的物件 */
+  const withX=XS.ents.length<=XLIMIT;
+  for(const list of withX?[doc.ents,XS.ents]:[doc.ents]) for(const e of list){ const l=lname(e.layer);
+    switch(e.type){
+      case 'line': line(l,e,e.x1,e.y1,e.x2,e.y2); break;
+      case 'pline': head('POLYLINE',l,e);p(66,1);p(10,0);p(20,0);p(30,0);p(70,e.closed?1:0);
+        for(const q of e.pts){p(0,'VERTEX');p(8,l);p(10,q[0]);p(20,q[1]);p(30,0);} p(0,'SEQEND');p(8,l); break;
+      case 'circle': head('CIRCLE',l,e);p(10,e.cx);p(20,e.cy);p(30,0);p(40,e.r); break;
+      case 'arc': head('ARC',l,e);p(10,e.cx);p(20,e.cy);p(30,0);p(40,e.r);p(50,normA(e.a1)*180/Math.PI);p(51,normA(e.a2)*180/Math.PI); break;
+      case 'text': text(l,e,e); break;
+      case 'hatch': /* R12 沒有 HATCH：實心轉成 SOLID 梯形，圖樣轉成裁切後的 LINE */
+        if(e.solid||!e.pat||!e.pat.length){ for(const q of scanTraps(e.loops)){head('SOLID',l,e);p(10,q[0][0]);p(20,q[0][1]);p(30,0);p(11,q[1][0]);p(21,q[1][1]);p(31,0);p(12,q[3][0]);p(22,q[3][1]);p(32,0);p(13,q[2][0]);p(23,q[2][1]);p(33,0);} }
+        else { let cnt=0; for(const pt of e.pat){ if(patLineRuns(e,pt,(o,u,t0,t1)=>{ dashRuns(t0,t1,pt.dash||[],(a,b)=>{line(l,e,o[0]+u[0]*a,o[1]+u[1]*a,o[0]+u[0]*b,o[1]+u[1]*b); cnt++;}); return cnt<200000; })===false) break; } }
+        break;
+      case 'dim': {const g=dimGeom(e); for(const s of g.lines) line(l,e,...s);
+        for(const a of g.arrows){head('SOLID',l,e);p(10,a[0][0]);p(20,a[0][1]);p(30,0);p(11,a[1][0]);p(21,a[1][1]);p(31,0);p(12,a[2][0]);p(22,a[2][1]);p(32,0);p(13,a[2][0]);p(23,a[2][1]);p(33,0);}
+        text(l,e,g.text); break;}
+    }
+  }
+  p(0,'ENDSEC');p(0,'EOF'); return o.join('\r\n')+'\r\n';
+}
+
+/* ---- DXF 匯入：圖塊展開、標註、橢圓、雲形線、多線、圓弧聚合線、顏色、文字對齊 ---- */
+const MI=[1,0,0,1,0,0], MIRX=[-1,0,0,1,0,0];
+const mmul=(M,N)=>[M[0]*N[0]+M[2]*N[1],M[1]*N[0]+M[3]*N[1],M[0]*N[2]+M[2]*N[3],M[1]*N[2]+M[3]*N[3],M[0]*N[4]+M[2]*N[5]+M[4],M[1]*N[4]+M[3]*N[5]+M[5]];
+const mtr=(x,y)=>[1,0,0,1,x,y], mrot=t=>[Math.cos(t),Math.sin(t),-Math.sin(t),Math.cos(t),0,0], mscl=(x,y)=>[x,0,0,y,0,0];
+function isSim(M){const sx=hyp(M[0],M[1]),sy=hyp(M[2],M[3]),k=Math.max(sx,sy,1e-12); return Math.abs(sx-sy)/k<1e-6&&Math.abs(M[0]*M[2]+M[1]*M[3])/(k*k)<1e-6;}
+function mapEnt(o,M){
+  if(M===MI) return o;
+  const P=p=>[M[0]*p[0]+M[2]*p[1]+M[4],M[1]*p[0]+M[3]*p[1]+M[5]], det=M[0]*M[3]-M[1]*M[2];
+  switch(o.type){
+    case 'line': {const a=P([o.x1,o.y1]),b=P([o.x2,o.y2]); return {...o,x1:a[0],y1:a[1],x2:b[0],y2:b[1]};}
+    case 'pline': return {...o,pts:o.pts.map(P)};
+    case 'circle': case 'arc': {
+      if(!isSim(M)){ const full=o.type==='circle', a1=full?0:o.a1, span=full?TAU:(normA(o.a2-o.a1)||TAU), n=Math.max(16,Math.ceil(72*span/TAU)), pts=[];
+        for(let k=0;k<=(full?n-1:n);k++){const t=a1+span*k/n; pts.push(P([o.cx+o.r*Math.cos(t),o.cy+o.r*Math.sin(t)]));}
+        return {type:'pline',closed:full,pts}; }
+      const c=P([o.cx,o.cy]), n={...o,cx:c[0],cy:c[1],r:o.r*Math.sqrt(Math.abs(det))};
+      if(o.type==='arc'){const a=P(arcPt(o,o.a1)),b=P(arcPt(o,o.a2)); let a1=Math.atan2(a[1]-c[1],a[0]-c[0]),a2=Math.atan2(b[1]-c[1],b[0]-c[0]); if(det<0){const t=a1;a1=a2;a2=t;} n.a1=a1;n.a2=a2;}
+      return n; }
+    case 'hatch': return transformEnt(o,P,{});
+    case 'text': {const p=P([o.x,o.y]),r=o.rot||0,dx=M[0]*Math.cos(r)+M[2]*Math.sin(r),dy=M[1]*Math.cos(r)+M[3]*Math.sin(r),
+      ux=-M[0]*Math.sin(r)+M[2]*Math.cos(r),uy=-M[1]*Math.sin(r)+M[3]*Math.cos(r),hs=hyp(ux,uy)||1;
+      return {...o,x:p[0],y:p[1],rot:Math.atan2(dy,dx),h:o.h*hs,wf:(o.wf||1)*hyp(dx,dy)/hs};}
+  }
+  return o;
+}
+function bulgePts(V,closed){
+  const out=[],n=V.length,m=closed?n:n-1;
+  for(let i=0;i<n;i++){ out.push([V[i].x,V[i].y]); if(i>=m||!V[i].b) continue;
+    const a=V[i],c=V[(i+1)%n],dx=c.x-a.x,dy=c.y-a.y,L=hyp(dx,dy); if(L<1e-12) continue;
+    const th=4*Math.atan(V[i].b),R=L/(2*Math.sin(th/2)),al=Math.atan2(dy,dx)+Math.PI/2-th/2,cx=a.x+R*Math.cos(al),cy=a.y+R*Math.sin(al),
+      a0=Math.atan2(a.y-cy,a.x-cx),rr=Math.abs(R),N=Math.max(2,Math.ceil(Math.abs(th)/(Math.PI/24)));
+    for(let k=1;k<N;k++){const t=a0+th*k/N; out.push([cx+rr*Math.cos(t),cy+rr*Math.sin(t)]);} }
+  return out;
+}
+const dxfPct=s=>s.replace(/%%[cC]/g,'Ø').replace(/%%[dD]/g,'°').replace(/%%[pP]/g,'±').replace(/%%%/g,'%').replace(/%%(\d{3})/g,(_,n)=>String.fromCharCode(+n)).replace(/%%[uUoOkK]/g,'');
+function mtextPlain(s){
+  return s.replace(/\\\\/g,'\u0001').replace(/\\P/g,'\n').replace(/\\~/g,' ').replace(/\\S([^;]*);/g,(_,x)=>x.replace(/[#^]/,'/'))
+    .replace(/\\[ACFHQTWfchqtwp][^;\\]*;/g,'').replace(/\\[LlOoKkNX]/g,'').replace(/[{}]/g,'').replace(/\u0001/g,'\\');
+}
+function fromDXF(txt){
+  const L=txt.split(/\r?\n/), recs=[]; let cur=null, sec='';
+  for(let i=0;i+1<L.length;i+=2){
+    const c=parseInt(L[i],10); if(isNaN(c)) continue; const raw=L[i+1], v=raw.trim();
+    if(c===0){ if(v==='ENDSEC') sec=''; cur={t:v,g:[],sec}; recs.push(cur); }
+    else if(cur){ cur.g.push([c,(c===1||c===3)?unesc(raw):(c===2||c===8)?unesc(v):v]); if(cur.t==='SECTION'&&c===2) sec=v; }
+  }
+  const g=(r,c,d)=>{for(const x of r.g) if(x[0]===c) return x[1]; return d;}, gn=(r,c,d)=>{const v=g(r,c,null); if(v===null) return d; const n=parseFloat(v); return isNaN(n)?d:n;};
+  const all=(r,c)=>r.g.filter(x=>x[0]===c).map(x=>+x[1]);
+  const d=blankDoc(); d.layers=[]; const li={}, skippedT={}; let count=0, capped=false;
+  const layerOf=n=>{n=n||'0'; if(!(n in li)){li[n]=d.layers.length; d.layers.push({name:n,color:'auto',on:true});} return li[n];};
+  layerOf('0');
+  /* 圖層表與圖塊定義 */
+  const blocks={}; let blk=null; const ents=[];
+  for(const r of recs){
+    if(r.sec==='TABLES'&&r.t==='LAYER'){ const n=g(r,2,'0'),idx=layerOf(n),ci=gn(r,62,7),tc=g(r,420,null);
+      d.layers[idx].color=tc!==null?rgbHex([(+tc>>16)&255,(+tc>>8)&255,+tc&255]):aciHex(Math.abs(ci)); d.layers[idx].on=ci>=0&&!(gn(r,70,0)&1); }
+    else if(r.sec==='BLOCKS'){ if(r.t==='BLOCK'){blk={name:g(r,2,''),base:[gn(r,10,0),gn(r,20,0)],recs:[],flags:gn(r,70,0),path:g(r,1,'')};} else if(r.t==='ENDBLK'){ if(blk) blocks[blk.name]=blk; blk=null; } else if(blk) blk.recs.push(r); }
+    else if(r.sec==='ENTITIES') ents.push(r);
+  }
+  const props=(r,inh)=>{ let ln=g(r,8,'0'), col; const tc=g(r,420,null), ci=gn(r,62,256);
+    if(tc!==null) col=rgbHex([(+tc>>16)&255,(+tc>>8)&255,+tc&255]); else if(ci===0) col=inh?inh.color:undefined; else if(ci!==256) col=aciHex(Math.abs(ci));
+    if(ln==='0'&&inh){ ln=inh.layer; if(col===undefined) col=inh.color; }
+    return {layer:ln,color:col==='auto'?undefined:col}; };
+  const add=(o,pr,M)=>{ if(count>=300000){capped=true;return;} const n=mapEnt(o,M); if(!n) return; n.id=d.nextId++; n.layer=layerOf(pr.layer); if(pr.color) n.color=pr.color; d.ents.push(n); count++; };
+  const xrefs={}, xrefOf=b=>xrefs[b.name]||(xrefs[b.name]={name:b.name,path:b.path||'',inserts:[],loaded:0});
+  for(const b of Object.values(blocks)) if(b.flags&4) xrefOf(b);
+  const IGNORE=new Set(['VIEWPORT','POINT','ATTDEF','SEQEND','ENDBLK','IMAGE','WIPEOUT','OLE2FRAME','XLINE','RAY']);
+  function emit(list,M,inh,depth){
+    for(let i=0;i<list.length;i++){
+      const r=list[i];
+      if(gn(r,67,0)===1||gn(r,60,0)===1){ if(r.t==='POLYLINE') while(i+1<list.length&&list[i+1].t!=='SEQEND') i++; continue; }
+      const pr=props(r,inh), Mo=gn(r,230,1)<0?mmul(M,MIRX):M;
+      switch(r.t){
+        case 'LINE': add({type:'line',x1:gn(r,10,0),y1:gn(r,20,0),x2:gn(r,11,0),y2:gn(r,21,0)},pr,M); break;
+        case 'CIRCLE': add({type:'circle',cx:gn(r,10,0),cy:gn(r,20,0),r:gn(r,40,1)},pr,Mo); break;
+        case 'ARC': {let a1=gn(r,50,0)*Math.PI/180,a2=gn(r,51,0)*Math.PI/180; add({type:'arc',cx:gn(r,10,0),cy:gn(r,20,0),r:gn(r,40,1),a1,a2},pr,Mo); break;}
+        case 'LWPOLYLINE': { const V=[]; for(const [c,v] of r.g){ if(c===10) V.push({x:+v,y:0,b:0}); else if(c===20&&V.length) V[V.length-1].y=+v; else if(c===42&&V.length) V[V.length-1].b=+v; }
+          const cl=(gn(r,70,0)&1)===1; if(V.length>=2) add({type:'pline',closed:cl,pts:bulgePts(V,cl)},pr,Mo); break; }
+        case 'POLYLINE': { const fl=gn(r,70,0), V=[]; let j=i+1;
+          for(;j<list.length&&list[j].t==='VERTEX';j++){ const v=list[j]; if(!(gn(v,70,0)&16)) V.push({x:gn(v,10,0),y:gn(v,20,0),b:gn(v,42,0)}); }
+          i=(j<list.length&&list[j].t==='SEQEND')?j:j-1;
+          if(!(fl&(16|64))&&V.length>=2) add({type:'pline',closed:!!(fl&1),pts:bulgePts(V,!!(fl&1))},pr,(fl&8)?M:Mo); break; }
+        case 'TEXT': case 'ATTRIB': { if(r.t==='ATTRIB'&&(gn(r,70,0)&1)) break; const s=dxfPct(g(r,1,'')); if(!s.trim()) break;
+          const h72=gn(r,72,0), v73=gn(r,r.t==='ATTRIB'?74:73,0); let x=gn(r,10,0),y=gn(r,20,0),align='left',va='base';
+          if((h72||v73)&&h72!==3&&h72!==5){ x=gn(r,11,x); y=gn(r,21,y); align=['left','center','right','left','center','left'][h72]||'left'; va=h72===4?'middle':(['base','bottom','middle','top'][v73]||'base'); }
+          add({type:'text',x,y,h:gn(r,40,2.5),s,rot:gn(r,50,0)*Math.PI/180,wf:gn(r,41,1),align,va},pr,Mo); break; }
+        case 'MTEXT': { const s=dxfPct(mtextPlain(r.g.filter(x=>x[0]===3).map(x=>x[1]).join('')+g(r,1,''))).replace(/^\n+|\n+$/g,''); if(!s.trim()) break;
+          const at=Math.min(9,Math.max(1,gn(r,71,1))); let rot=gn(r,50,0); const dx=g(r,11,null); if(dx!==null) rot=Math.atan2(gn(r,21,0),+dx);
+          add({type:'text',x:gn(r,10,0),y:gn(r,20,0),h:gn(r,40,2.5),s,rot,wf:1,align:['left','center','right'][(at-1)%3],va:['top','middle','bottom'][Math.floor((at-1)/3)]},pr,M); break; }
+        case 'INSERT': { const b=blocks[g(r,2,'')]; if(!b||depth>16){skippedT['圖塊']=(skippedT['圖塊']||0)+1; break;}
+          const sx=gn(r,41,1),sy=gn(r,42,1),rot=gn(r,50,0)*Math.PI/180,cols=Math.max(1,gn(r,70,1)),rows=Math.max(1,gn(r,71,1)),cs=gn(r,44,0),rs=gn(r,45,0);
+          const inh2={layer:pr.layer,color:pr.color};
+          /* 外部參考：內容在另一個檔案，先記下名稱、路徑與插入矩陣，之後由使用者選檔載入 */
+          if(b.flags&4){ const X=xrefOf(b);
+            for(let ci=0;ci<cols;ci++) for(let ri=0;ri<rows;ri++)
+              X.inserts.push({M:[mtr(gn(r,10,0),gn(r,20,0)),mrot(rot),mtr(ci*cs,ri*rs),mscl(sx,sy),mtr(-b.base[0],-b.base[1])].reduce(mmul,Mo),layer:pr.layer,color:pr.color});
+            if(!b.recs.length) break; }
+          for(let ci=0;ci<cols;ci++) for(let ri=0;ri<rows;ri++)
+            emit(b.recs,[mtr(gn(r,10,0),gn(r,20,0)),mrot(rot),mtr(ci*cs,ri*rs),mscl(sx,sy),mtr(-b.base[0],-b.base[1])].reduce(mmul,Mo),inh2,depth+1);
+          break; }
+        case 'DIMENSION': { const b=blocks[g(r,2,'')];
+          if(b) emit(b.recs,mmul(M,mtr(gn(r,12,0),gn(r,22,0))),{layer:pr.layer,color:pr.color},depth+1);
+          else add({type:'dim',x1:gn(r,13,0),y1:gn(r,23,0),x2:gn(r,14,0),y2:gn(r,24,0),ox:gn(r,10,0),oy:gn(r,20,0)},pr,M);
+          break; }
+        case 'LEADER': { const X=all(r,10),Y=all(r,20); if(X.length>=2) add({type:'pline',closed:false,pts:X.map((x,k)=>[x,Y[k]])},pr,M); break; }
+        case 'ELLIPSE': { const cx=gn(r,10,0),cy=gn(r,20,0),mx=gn(r,11,1),my=gn(r,21,0),q=gn(r,40,1),neg=gn(r,230,1)<0,
+            nx=neg?q*my:-q*my, ny=neg?-q*mx:q*mx, t0=gn(r,41,0); let span=gn(r,42,TAU)-t0; while(span<=1e-12) span+=TAU; if(span>TAU) span=TAU;
+          const full=Math.abs(span-TAU)<1e-6, N=Math.max(12,Math.ceil(72*span/TAU)), pts=[];
+          for(let k=0;k<=(full?N-1:N);k++){const t=t0+span*k/N; pts.push([cx+mx*Math.cos(t)+nx*Math.sin(t),cy+my*Math.cos(t)+ny*Math.sin(t)]);}
+          add({type:'pline',closed:full,pts},pr,M); break; }
+        case 'SPLINE': { const pts=splinePts(r,gn,all); if(pts) add({type:'pline',closed:false,pts},pr,M); break; }
+        case 'MLINE': for(const o of mlinePls(r,gn)) add(o,pr,M); break;
+        case 'SOLID': case 'TRACE': case '3DFACE': { const q=[[gn(r,10,0),gn(r,20,0)],[gn(r,11,0),gn(r,21,0)],[gn(r,12,0),gn(r,22,0)],[gn(r,13,0),gn(r,23,0)]];
+          if(r.t==='3DFACE'){ add({type:'pline',closed:true,pts:q},pr,M); break; }
+          /* SOLID／TRACE 是實心填塊（R12 的實心填充、箭頭都存成它），頂點順序為 1-2-4-3 */
+          const pts=[q[0],q[1],q[3],q[2]].filter((p,k,a)=>k===0||D2(p,a[k-1])>1e-12); if(pts.length>2&&D2(pts[0],pts[pts.length-1])<=1e-12) pts.pop();
+          if(pts.length>=3) add({type:'hatch',name:'SOLID',solid:true,loops:[pts],pat:[]},pr,Mo);
+          else if(pts.length===2) add({type:'line',x1:pts[0][0],y1:pts[0][1],x2:pts[1][0],y2:pts[1][1]},pr,Mo);
+          break; }
+        case 'HATCH': { const h=parseHatch(r); if(h) add(h,pr,Mo); else skippedT['填充線']=(skippedT['填充線']||0)+1; break; }
+        default: if(!IGNORE.has(r.t)) skippedT[r.t]=(skippedT[r.t]||0)+1;
+      }
+    }
+  }
+  emit(ents,MI,null,0);
+  /* 依匯入的文字大小設定預設字高 */
+  const hs=d.ents.filter(e=>e.type==='text').map(e=>e.h).sort((a,b)=>a-b);
+  if(hs.length){ d.textH=+hs[hs.length>>1].toPrecision(3); d.offD=d.textH*2; d.hatch.s=+(d.textH/2.5).toPrecision(2); }
+  d.xrefs=Object.values(xrefs);
+  const skipped=Object.values(skippedT).reduce((a,b)=>a+b,0);
+  return {d,skipped,skippedT,capped};
+}
+/* HATCH：依 DXF 規格讀邊界路徑（聚合線／直線、圓弧、橢圓弧、雲形線邊）與圖樣線定義 */
+function hatchArc(cx,cy,mx,my,q,s,e,ccw){
+  if(!ccw){s=-s;e=-e;}
+  let sp=ccw?normA(e-s):-normA(s-e); if(Math.abs(sp)<1e-9) sp=ccw?TAU:-TAU;
+  const n=Math.max(4,Math.ceil(Math.abs(sp)/(Math.PI/36))),nx=-q*my,ny=q*mx,out=[];
+  for(let k=0;k<=n;k++){const t=s+sp*k/n; out.push([cx+mx*Math.cos(t)+nx*Math.sin(t),cy+my*Math.cos(t)+ny*Math.sin(t)]);}
+  return out;
+}
+function parseHatch(r){
+  const G=r.g, D=Math.PI/180; let i=G.findIndex(x=>x[0]===91); if(i<0) return null;
+  const name=String((G.find(x=>x[0]===2)||[0,''])[1]).toUpperCase(), solidF=+((G.find(x=>x[0]===70)||[0,0])[1])===1;
+  const np=+G[i][1]; i++;
+  const take=c=>{while(i<G.length&&G[i][0]!==c) i++; return i<G.length?+G[i++][1]:0;};
+  const loops=[];
+  for(let pI=0;pI<np&&i<G.length;pI++){
+    const flag=take(92), pts=[];
+    const push=seg=>{ if(!seg.length) return; if(pts.length){const L=pts[pts.length-1]; if(D2(L,seg[seg.length-1])<D2(L,seg[0])) seg=seg.slice().reverse(); if(D2(L,seg[0])<1e-9) seg=seg.slice(1);} pts.push(...seg); };
+    if(flag&2){ const hasB=take(72); take(73); const nv=take(93), V=[];
+      for(let k=0;k<nv;k++){const x=take(10),y=take(20); let b=0; if(hasB&&i<G.length&&G[i][0]===42){b=+G[i][1]; i++;} V.push({x,y,b});}
+      pts.push(...bulgePts(V,true)); }
+    else{ const ne=take(93);
+      for(let k=0;k<ne;k++){ const et=take(72);
+        if(et===1) push([[take(10),take(20)],[take(11),take(21)]]);
+        else if(et===2){const cx=take(10),cy=take(20),R=take(40),s=take(50)*D,e=take(51)*D,ccw=take(73); push(hatchArc(cx,cy,R,0,1,s,e,ccw));}
+        else if(et===3){const cx=take(10),cy=take(20),mx=take(11),my=take(21),q=take(40),s=take(50)*D,e=take(51)*D,ccw=take(73); push(hatchArc(cx,cy,mx,my,q,s,e,ccw));}
+        else if(et===4){ const deg=take(94); const rat=take(73); take(74); const nk=take(95),nc=take(96),K=[],X=[],Y=[],Wt=[];
+          for(let j=0;j<nk;j++) K.push(take(40));
+          for(let j=0;j<nc;j++){X.push(take(10)); Y.push(take(20)); if(rat&&i<G.length&&G[i][0]===42){Wt.push(+G[i][1]); i++;} else Wt.push(1);}
+          const sp=evalBSpline(deg,K,X,Y,Wt); if(sp) push(sp); }
+      } }
+    if(pts.length>2&&D2(pts[0],pts[pts.length-1])<1e-9) pts.pop();
+    if(pts.length>=3) loops.push(pts);
+  }
+  const pat=[];
+  if(!solidF){ let j=i; while(j<G.length&&G[j][0]!==78) j++;
+    if(j<G.length){ i=j+1; const nl=+G[j][1];
+      for(let k=0;k<nl;k++){const a=take(53)*D,x=take(43),y=take(44),dx=take(45),dy=take(46),nd=take(79),dash=[]; for(let q=0;q<nd;q++) dash.push(take(49)); pat.push({a,x,y,dx,dy,dash});} } }
+  if(!loops.length) return null;
+  return {type:'hatch',name,solid:solidF||!pat.length,loops,pat};
+}
+function evalBSpline(p,K,X,Y,Wt){
+  const n=X.length; if(!(n>p&&K.length===n+p+1)) return null;
+  const Pw=X.map((x,i)=>{const w=Wt[i]||1; return [x*w,Y[i]*w,w];}), t0=K[p], t1=K[n], N=Math.min(400,Math.max(16,n*12)), out=[];
+  for(let s=0;s<=N;s++){ const t=s===N?t1-(t1-t0)*1e-9:t0+(t1-t0)*s/N; let k=p; while(k<n-1&&t>=K[k+1]) k++;
+    const dd=[]; for(let j=0;j<=p;j++) dd[j]=Pw[k-p+j].slice();
+    for(let rr=1;rr<=p;rr++) for(let j=p;j>=rr;j--){const i=k-p+j,den=K[i+p-rr+1]-K[i],a=den?(t-K[i])/den:0; for(let q=0;q<3;q++) dd[j][q]=(1-a)*dd[j-1][q]+a*dd[j][q];}
+    out.push([dd[p][0]/dd[p][2],dd[p][1]/dd[p][2]]); }
+  return out;
+}
+function splinePts(r,gn,all){
+  const p=gn(r,71,3),K=all(r,40),X=all(r,10),Y=all(r,20),Wt=all(r,41),n=X.length;
+  if(n>p&&K.length===n+p+1){
+    const Pw=X.map((x,i)=>{const w=Wt[i]||1; return [x*w,Y[i]*w,w];}), t0=K[p], t1=K[n], N=Math.min(400,Math.max(16,n*12)), out=[];
+    for(let s=0;s<=N;s++){ const t=s===N?t1-(t1-t0)*1e-9:t0+(t1-t0)*s/N; let k=p; while(k<n-1&&t>=K[k+1]) k++;
+      const dd=[]; for(let j=0;j<=p;j++) dd[j]=Pw[k-p+j].slice();
+      for(let rr=1;rr<=p;rr++) for(let j=p;j>=rr;j--){const i=k-p+j,den=K[i+p-rr+1]-K[i],a=den?(t-K[i])/den:0; for(let q=0;q<3;q++) dd[j][q]=(1-a)*dd[j-1][q]+a*dd[j][q];}
+      out.push([dd[p][0]/dd[p][2],dd[p][1]/dd[p][2]]); }
+    return out;
+  }
+  const FX=all(r,11),FY=all(r,21); if(FX.length>=2) return FX.map((x,i)=>[x,FY[i]]);
+  return n>=2?X.map((x,i)=>[x,Y[i]]):null;
+}
+function mlinePls(r,gn){
+  const ne=gn(r,73,0), closed=(gn(r,71,0)&2)!==0, els=Array.from({length:ne},()=>[]);
+  let v=null,mt=null,ei=-1,got=0;
+  for(const [c,s] of r.g){ const n=+s;
+    if(c===11) v=[n,0]; else if(c===21&&v) v[1]=n;
+    else if(c===13) mt=[n,0]; else if(c===23&&mt){mt[1]=n; ei=-1;}
+    else if(c===74&&mt){ei++; got=0;}
+    else if(c===41&&ei>=0&&els[ei]){ if(got===0) els[ei].push([v[0]+mt[0]*n,v[1]+mt[1]*n]); got++; }
+  }
+  return els.filter(e=>e.length>=2).map(pts=>({type:'pline',closed,pts}));
+}
+
+/* 匯出入 */
+let exportName='', exportText='';
+function openExport(title,name,text){exportName=name;exportText=text; $('#eTitle').textContent=title; $('#eText').value=text; $('#dMenu').close(); $('#dExport').showModal();}
+/* Android App 版：由 App 提供的 AndroidBridge 負責存檔、複製、開啟外部檔案 */
+const NATIVE=window.AndroidBridge||null;
+if(NATIVE){ $('#eNote').hidden=true; $('#eDown').textContent='儲存檔案'; }
+/* iPhone／iPad（含加入主畫面的網頁 App）：存檔改用系統分享選單；選檔不設副檔名過濾，否則 iOS 會把 .dwg 反灰 */
+const IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+if(IOS){
+  document.querySelectorAll('input[type=file]').forEach(i=>i.removeAttribute('accept'));
+  $('#eDown').textContent='儲存檔案'; $('#eNote').textContent='按「儲存檔案」後，在分享選單選「儲存到檔案」，即可存到 iPhone 或 iCloud 雲碟。';
+  document.addEventListener('gesturestart',e=>e.preventDefault()); document.addEventListener('gesturechange',e=>e.preventDefault());
+}
+$('#eCopy').addEventListener('click',()=>{
+  if(NATIVE){ try{NATIVE.copyText(exportText); toast('已複製到剪貼簿');}catch(_){selectExport();} return; }
+  const ok=()=>toast('已複製到剪貼簿');
+  try{navigator.clipboard.writeText(exportText).then(ok,()=>{selectExport();});}catch(_){selectExport();}
+});
+function selectExport(){const t=$('#eText'); t.focus(); t.select(); try{document.execCommand('copy'); toast('已複製到剪貼簿');}catch(_){toast('請長按文字框，全選後複製');}}
+$('#eDown').addEventListener('click',()=>{
+  if(NATIVE){ NATIVE.saveFile(exportName,exportText); return; }
+  if(IOS&&navigator.canShare){ try{ const file=new File([exportText],exportName,{type:exportName.endsWith('.json')?'application/json':'application/dxf'});
+    if(navigator.canShare({files:[file]})){ navigator.share({files:[file],title:exportName}).catch(err=>{ if(err&&err.name!=='AbortError') toast('無法開啟分享選單，請改用「複製內容」'); }); return; } }catch(_){} }
+  try{const b=new Blob([exportText],{type:'application/octet-stream'}),a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=exportName; document.body.appendChild(a); a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);}catch(_){}
+  toast('若沒有開始下載，請改用「複製內容」');
+});
+$('#mDxf').addEventListener('click',()=>{ const big=XS.ents.length>XLIMIT; openExport(big?'匯出 DXF（不含底圖與外部參考）':'匯出 DXF','drawing.dxf',toDXF());
+  if(big) toast('底圖與外部參考有 '+XS.ents.length+' 個物件，手機產生不了這麼大的檔案，這次只匯出你畫的物件',6000); });
+$('#mJson').addEventListener('click',()=>{ const big=XS.ents.length>XLIMIT;
+  const xs=big?{xrefs:XS.xrefs.filter(x=>!x.base).map(x=>Object.assign({},x,{loaded:0})),ents:[],layers:XS.layers}:XS;
+  openExport(big?'匯出專案 JSON（不含底圖物件）':'匯出專案 JSON','drawing.json',JSON.stringify(Object.assign({},doc,{xstate:xs})));
+  if(big) toast('底圖物件太多，專案 JSON 只保存你畫的物件與外部參考清單；底圖請重新開啟原檔',6000); });
+/* ---------- DWG 讀取（LibreDWG WebAssembly，GPL-3.0） ----------
+   不經過 DXF 文字：逐一圖塊把 DWG 物件轉成精簡幾何，轉完即丟；讀完立刻釋放整個元件（大檔需要近 1 GB），
+   讓手機只保留圖面本身。每次讀檔都建立新元件，不常駐記憶體。 */
+const dwgBase=()=>new URL('.',location.href).href.replace(/\/$/,'');
+const isDwg=(name,buf)=>{const h=new Uint8Array(buf,0,Math.min(6,buf.byteLength)); return /\.dwg$/i.test(name)||(h[0]===0x41&&h[1]===0x43&&h[2]===0x31&&h[3]>=0x30&&h[3]<=0x39);};
+const tick=()=>new Promise(r=>setTimeout(r,30));
+let progressCb=null;
+const progress=s=>{ if(progressCb) progressCb(s); };
+const pxy=p=>[p&&+p.x||0,p&&+p.y||0];
+/* 把元件轉出的一個物件變成精簡項目（仍在所屬圖塊的座標系）；回傳 null 表示略過 */
+function dwgLean(e,skip){
+  if(!e||e.isVisible===false) return null;
+  const neg=!!(e.extrusionDirection&&e.extrusionDirection.z<0);
+  const it={ln:e.layer||'0',ci:e.colorIndex==null?256:e.colorIndex,neg};
+  switch(e.type){
+    case 'LINE': it.o={type:'line',x1:e.startPoint.x,y1:e.startPoint.y,x2:e.endPoint.x,y2:e.endPoint.y}; it.neg=false; return it;
+    case 'CIRCLE': it.o={type:'circle',cx:e.center.x,cy:e.center.y,r:e.radius}; return it;
+    case 'ARC': it.o={type:'arc',cx:e.center.x,cy:e.center.y,r:e.radius,a1:e.startAngle,a2:e.endAngle}; return it;
+    case 'LWPOLYLINE': { const V=(e.vertices||[]).map(v=>({x:v.x,y:v.y,b:v.bulge||0})); if(V.length<2) return null;
+      const cl=((e.flag||0)&1)===1; it.o={type:'pline',closed:cl,pts:bulgePts(V,cl)}; return it; }
+    case 'POLYLINE': case 'POLYLINE2D': case 'POLYLINE_2D': case 'POLYLINE3D': case 'POLYLINE_3D': {
+      const V=(e.vertices||[]).filter(v=>!((v.flag||0)&16)).map(v=>({x:(v.point||v).x,y:(v.point||v).y,b:v.bulge||0})); if(V.length<2) return null;
+      const cl=((e.flag||0)&1)===1; it.o={type:'pline',closed:cl,pts:bulgePts(V,cl)}; if(/3D/.test(e.type)) it.neg=false; return it; }
+    case 'TEXT': case 'ATTRIB': {
+      const t=e.type==='ATTRIB'?e.text:e; if(!t) return null; if(e.type==='ATTRIB'&&((e.flags||0)&1)) return null;
+      const s=dxfPct(String(t.text||'')); if(!s.trim()) return null;
+      const h=t.halign||0, v=t.valign||0; let p=pxy(t.startPoint), align='left', va='base';
+      if((h||v)&&h!==3&&h!==5){ p=pxy(t.endPoint&&(t.endPoint.x||t.endPoint.y)?t.endPoint:(e.alignmentPoint||t.startPoint)); align=['left','center','right','left','center','left'][h]||'left'; va=h===4?'middle':(['base','bottom','middle','top'][v]||'base'); }
+      it.o={type:'text',x:p[0],y:p[1],h:t.textHeight||2.5,s,rot:t.rotation||0,wf:t.xScale||1,align,va}; return it; }
+    case 'MTEXT': { const s=dxfPct(mtextPlain(String(e.text||''))).replace(/^\n+|\n+$/g,''); if(!s.trim()) return null;
+      const at=Math.min(9,Math.max(1,e.attachmentPoint||1)); let rot=e.rotation||0; if(e.direction&&(e.direction.x||e.direction.y)) rot=Math.atan2(e.direction.y,e.direction.x);
+      const p=pxy(e.insertionPoint); it.o={type:'text',x:p[0],y:p[1],h:e.textHeight||2.5,s,rot,wf:1,align:['left','center','right'][(at-1)%3],va:['top','middle','bottom'][Math.floor((at-1)/3)]}; it.neg=false; return it; }
+    case 'INSERT': { it.ins={name:e.name,ip:pxy(e.insertionPoint),sx:e.xScale||1,sy:e.yScale||1,rot:e.rotation||0,cols:Math.max(1,e.columnCount||1),rows:Math.max(1,e.rowCount||1),cs:e.columnSpacing||0,rs:e.rowSpacing||0};
+      it.att=(e.attribs||[]).map(a=>dwgLean(a,skip)).filter(Boolean); return it; }
+    case 'DIMENSION': { it.neg=false;
+      if(e.name){ it.ins={name:e.name,ip:pxy(e.insertionPoint),sx:1,sy:1,rot:0,cols:1,rows:1,cs:0,rs:0,dim:true};
+        const a=pxy(e.subDefinitionPoint1),b=pxy(e.subDefinitionPoint2),o=pxy(e.definitionPoint);
+        it.fallback={type:'dim',x1:a[0],y1:a[1],x2:b[0],y2:b[1],ox:o[0],oy:o[1]}; return it; }
+      return null; }
+    case 'HATCH': { const loops=[];
+      for(const bp of (e.boundaryPaths||[])){
+        const pts=[], push=seg=>{ if(!seg||!seg.length) return; if(pts.length){const L=pts[pts.length-1]; if(D2(L,seg[seg.length-1])<D2(L,seg[0])) seg=seg.slice().reverse(); if(D2(L,seg[0])<1e-9) seg=seg.slice(1);} pts.push(...seg); };
+        if((bp.boundaryPathTypeFlag||0)&2){ const V=(bp.vertices||[]).map(v=>({x:v.x,y:v.y,b:v.bulge||0})); pts.push(...bulgePts(V,true)); }
+        else for(const ed of (bp.edges||[])){
+          if(ed.type===1) push([pxy(ed.start),pxy(ed.end)]);
+          else if(ed.type===2) push(hatchArc(ed.center.x,ed.center.y,ed.radius,0,1,ed.startAngle,ed.endAngle,ed.isCCW));
+          else if(ed.type===3){ const q=ed.lengthOfMinorAxis>0&&ed.lengthOfMinorAxis<=1?ed.lengthOfMinorAxis:1; push(hatchArc(ed.center.x,ed.center.y,ed.end.x,ed.end.y,q,ed.startAngle,ed.endAngle,ed.isCCW)); }
+          else if(ed.type===4){ const C=ed.controlPoints||[], sp=evalBSpline(ed.degree||3,ed.knots||[],C.map(c=>c.x),C.map(c=>c.y),C.map(c=>c.weight||c.z||1)); push(sp||(ed.fitDatum||ed.fitPoints||[]).map(pxy)); }
+        }
+        if(pts.length>2&&D2(pts[0],pts[pts.length-1])<1e-9) pts.pop();
+        if(pts.length>=3) loops.push(pts);
+      }
+      if(!loops.length) return null;
+      const pat=(e.definitionLines||[]).map(l=>({a:l.angle||0,x:l.base?l.base.x:0,y:l.base?l.base.y:0,dx:l.offset?l.offset.x:0,dy:l.offset?l.offset.y:0,dash:(l.dashLengths||[]).slice()}));
+      it.o={type:'hatch',name:String(e.patternName||'').toUpperCase(),solid:!!e.solidFill||!pat.length,loops,pat}; return it; }
+    case 'SOLID': case 'TRACE': { const q=[pxy(e.corner1),pxy(e.corner2),pxy(e.corner3||e.corner4),pxy(e.corner4||e.corner3)];
+      const pts=[q[0],q[1],q[3],q[2]].filter((p,k,a)=>k===0||D2(p,a[k-1])>1e-12); if(pts.length>2&&D2(pts[0],pts[pts.length-1])<=1e-12) pts.pop();
+      if(pts.length>=3) it.o={type:'hatch',name:'SOLID',solid:true,loops:[pts],pat:[]}; else if(pts.length===2) it.o={type:'line',x1:pts[0][0],y1:pts[0][1],x2:pts[1][0],y2:pts[1][1]}; else return null; return it; }
+    case '3DFACE': { const q=[pxy(e.corner1||e.firstCorner),pxy(e.corner2||e.secondCorner),pxy(e.corner3||e.thirdCorner),pxy(e.corner4||e.fourthCorner)]; it.o={type:'pline',closed:true,pts:q}; it.neg=false; return it; }
+    case 'ELLIPSE': { const c=pxy(e.center),m=pxy(e.majorAxisEndPoint),q=e.axisRatio||1,nx=neg?q*m[1]:-q*m[1],ny=neg?-q*m[0]:q*m[0],t0=e.startAngle||0;
+      let span=(e.endAngle==null?TAU:e.endAngle)-t0; while(span<=1e-12) span+=TAU; if(span>TAU) span=TAU;
+      const full=Math.abs(span-TAU)<1e-6,N=Math.max(12,Math.ceil(72*span/TAU)),pts=[];
+      for(let k=0;k<=(full?N-1:N);k++){const t=t0+span*k/N; pts.push([c[0]+m[0]*Math.cos(t)+nx*Math.sin(t),c[1]+m[1]*Math.cos(t)+ny*Math.sin(t)]);}
+      it.o={type:'pline',closed:full,pts}; it.neg=false; return it; }
+    case 'SPLINE': { const C=e.controlPoints||[]; let pts=null;
+      if(C.length) pts=evalBSpline(e.degree||3,e.knots||[],C.map(c=>c.x),C.map(c=>c.y),(e.weights&&e.weights.length===C.length)?e.weights:C.map(()=>1));
+      if(!pts&&(e.fitPoints||[]).length>=2) pts=e.fitPoints.map(pxy);
+      if(!pts&&C.length>=2) pts=C.map(pxy);
+      if(!pts) return null; it.o={type:'pline',closed:false,pts}; it.neg=false; return it; }
+    case 'LEADER': { const V=(e.vertices||[]).map(pxy); if(V.length<2) return null; it.o={type:'pline',closed:false,pts:V}; it.neg=false; return it; }
+    case 'POINT': case 'VIEWPORT': case 'ATTDEF': case 'XLINE': case 'RAY': case 'IMAGE': case 'WIPEOUT': case 'OLE2FRAME': return null;
+    default: skip[e.type]=(skip[e.type]||0)+1; return null;
+  }
+}
+/* 讀 DWG 成圖面：與 DXF 匯入相同的圖塊展開、外部參考記錄、圖層與顏色規則 */
+async function dwgToDoc(buf){
+  /* DWG 檔頭是 AC10xx／AC1.xx 版本字串；不是的話（例如副檔名取錯）直接說明，不要開出空白圖 */
+  const h=String.fromCharCode(...new Uint8Array(buf,0,Math.min(6,buf.byteLength)));
+  if(!/^AC1[0-9.]\d\d/.test(h)&&!/^MC0\.0/.test(h)) throw new Error('這不是有效的 DWG 檔（檔頭不符），可能檔案損壞或副檔名錯誤');
+  if(/^MC0/.test(h)||h<'AC1012') throw new Error('這是 R12 以前的舊版 DWG（'+h+'），請先在 AutoCAD 另存成較新版本或 DXF');
+  const base=dwgBase();
+  let mod; try{ mod=await import(base+'/dwg.js'); }catch(_){ throw new Error('這個版本找不到 DWG 讀取元件，請用 App 版，或先轉成 DXF'); }
+  if(!mod.LibreDwgConverter) throw new Error('DWG 讀取元件版本不符');
+  progress('正在載入 DWG 讀取元件…'); await tick();
+  let lib=await mod.LibreDwg.create(base), W=lib.wasmInstance, p=0;
+  const T=mod.Dwg_Object_Type, skip={}, blocks={}, layers=[];
+  try{
+    progress('正在解析 DWG…'); await tick();
+    try{ p=lib.dwg_read_data(buf,mod.Dwg_File_Type.DWG); }catch(err){ throw new Error('DWG 讀取失敗（'+((err&&err.message)||'檔案可能損壞')+'）'); }
+    if(!p) throw new Error('DWG 讀取失敗，檔案可能損壞或版本不支援');
+    const conv=new mod.LibreDwgConverter(lib); const ec=conv.entityConverter; ec.clear();
+    conv.orphanEntitiesByBlock=null; conv.ownerlessOrphanIndices=null; conv.orphanIndexDataPtr=p;
+    try{ const cls=[]; conv.convertClasses(p,cls); ec.setClasses(cls); }catch(_){}
+    const n=W.dwg_get_num_objects(p), heads=[];
+    for(let i=0;i<n;i++){ const obj=W.dwg_get_object(p,i); if(!obj) continue; const tio=conv.safeObjectTio(obj); if(!tio) continue;
+      const ft=W.dwg_object_get_fixedtype(obj);
+      if(ft===T.DWG_TYPE_LAYER){ try{ const l=conv.convertLayer(tio,obj); layers.push({name:l.name,ci:l.colorIndex,off:!!l.off||(l.colorIndex<0),frozen:!!l.frozen}); ec.layers.set(l.handle,l.name);}catch(_){} }
+      else if(ft===T.DWG_TYPE_LTYPE){ try{ const lt=conv.convertLineType(tio,obj); ec.ltypes.set(lt.handle,lt.name);}catch(_){} }
+      else if(ft===T.DWG_TYPE_BLOCK_HEADER) heads.push([tio,obj]);
+    }
+    let k=0, t0=performance.now();
+    for(const [tio,obj] of heads){
+      let nm=''; try{ const bk=W.dwg_entity_block_header_get_block(tio); nm=bk&&bk.name||''; }catch(_){}
+      if(/^\*Paper_Space/i.test(nm)) continue;
+      let br; try{ br=conv.convertBlockRecord(tio,obj); }catch(_){ continue; }
+      const items=[]; for(const e of br.entities){ const it=dwgLean(e,skip); if(it) items.push(it); }
+      blocks[br.name]={name:br.name,base:pxy(br.basePoint),flags:br.flags||0,items};
+      br.entities.length=0;
+      if(++k%50===0&&performance.now()-t0>300){ progress(`正在轉換圖塊 ${k}/${heads.length}…`); await tick(); t0=performance.now(); }
+    }
+  }finally{
+    try{ if(p) lib.dwg_free(p); }catch(_){}
+    lib=null; W=null;   /* 放掉元件：wasm 記憶體在沒有引用後由瀏覽器回收 */
+  }
+  progress('正在建立圖面…'); await tick();
+  return leanToDoc(blocks,layers,skip);
+}
+function leanToDoc(blocks,layers,skipT){
+  const d=blankDoc(); d.layers=[]; const li={};
+  const layerOf=n=>{n=n||'0'; if(!(n in li)){li[n]=d.layers.length; d.layers.push({name:n,color:'auto',on:true});} return li[n];};
+  layerOf('0');
+  for(const l of layers){ const i=layerOf(l.name); d.layers[i].color=aciHex(Math.abs(l.ci||7)); d.layers[i].on=!l.off&&!l.frozen; }
+  const xrefs={}, xrefOf=b=>xrefs[b.name]||(xrefs[b.name]={name:b.name,path:'',inserts:[],loaded:0});
+  for(const b of Object.values(blocks)) if(b.flags&4) xrefOf(b);
+  let count=0, capped=false; const LIMIT=1500000;
+  const props=(it,inh)=>{ let ln=it.ln, col; const ci=it.ci;
+    if(ci===0) col=inh?inh.color:undefined; else if(ci!==256&&ci>0) col=aciHex(ci);
+    if(ln==='0'&&inh){ ln=inh.layer; if(col===undefined) col=inh.color; }
+    return {layer:ln,color:col==='auto'?undefined:col}; };
+  const add=(o,pr,M)=>{ if(count>=LIMIT){capped=true;return;} let n=mapEnt(o,M); if(n===o) n=JSON.parse(JSON.stringify(o)); n.id=d.nextId++; n.layer=layerOf(pr.layer); if(pr.color) n.color=pr.color; d.ents.push(n); count++; };
+  const emit=(items,M,inh,depth)=>{
+    for(const it of items){
+      const pr=props(it,inh), Mo=it.neg?mmul(M,MIRX):M;
+      if(it.o){ add(it.o,pr,Mo); continue; }
+      if(!it.ins) continue;
+      const s=it.ins, b=blocks[s.name];
+      if(it.att) emit(it.att,M,inh,depth);
+      if(!b||depth>16){ if(it.fallback) add(it.fallback,pr,M); else skipT['圖塊']=(skipT['圖塊']||0)+1; continue; }
+      const inh2={layer:pr.layer,color:pr.color};
+      for(let ci=0;ci<s.cols;ci++) for(let ri=0;ri<s.rows;ri++){
+        const BM=[mtr(s.ip[0],s.ip[1]),mrot(s.rot),mtr(ci*s.cs,ri*s.rs),mscl(s.sx,s.sy),mtr(-b.base[0],-b.base[1])].reduce(mmul,s.dim?M:Mo);
+        if(b.flags&4){ xrefOf(b).inserts.push({M:BM,layer:pr.layer,color:pr.color}); if(!b.items.length) continue; }
+        emit(b.items,BM,inh2,depth+1);
+      }
+    }
+  };
+  const ms=Object.values(blocks).find(b=>/^\*Model_Space$/i.test(b.name));
+  if(ms) emit(ms.items,MI,null,0);
+  d.xrefs=Object.values(xrefs);
+  const hs=[]; for(let i=0;i<d.ents.length&&hs.length<20000;i+=Math.max(1,Math.floor(d.ents.length/20000))) if(d.ents[i].type==='text') hs.push(d.ents[i].h);
+  hs.sort((a,b)=>a-b); if(hs.length){ d.textH=+hs[hs.length>>1].toPrecision(3); d.offD=d.textH*2; d.hatch.s=+(d.textH/2.5).toPrecision(2); }
+  const skipped=Object.values(skipT).reduce((a,b)=>a+b,0);
+  return {d,skipped,skippedT:skipT,capped};
+}
+/* 把 DWG／DXF／JSON 檔解析成圖面（不取代目前圖面）；失敗時丟出說明原因的錯誤 */
+async function parseFile(name,buf){
+  if(isDwg(name,buf)){
+    const r=await dwgToDoc(buf);
+    return {d:r.d,msg:`${r.d.ents.length} 個物件、${r.d.layers.length} 個圖層`+
+      (r.skipped?`；略過 ${Object.entries(r.skippedT).map(([k,v])=>k+'×'+v).join('、')}`:'')+(r.capped?'；物件過多，只匯入前 150 萬個':'')};
+  }
+  const txt=decodeBytes(buf);
+  if(/\.json$/i.test(name)||txt.trim().startsWith('{')){const d=JSON.parse(txt); if(!validDoc(d)) throw new Error('格式不符'); const nd=Object.assign(blankDoc(),d); return {d:nd,msg:`已匯入 ${nd.ents.length} 個物件`};}
+  if(!/(^|\n)\s*0\s*\r?\n\s*SECTION/.test(txt.slice(0,200000))) throw new Error('不是 DWG、DXF 或專案 JSON 檔');
+  const r=fromDXF(txt);
+  return {d:r.d,msg:`${r.d.ents.length} 個物件、${r.d.layers.length} 個圖層`+
+    (r.skipped?`；略過 ${Object.entries(r.skippedT).map(([k,v])=>k+'×'+v).join('、')}`:'')+(r.capped?'；物件過多，只匯入前 30 萬個':'')};
+}
+/* 物件數超過這個值的圖，原圖物件改放「唯讀底圖」（與外部參考相同機制），你畫的東西另外存，編輯不會變慢 */
+const BASE_LIMIT=30000;
+async function importBuffer(name,buf){
+  progressCb=s=>toast(s,60000);
+  progress(isDwg(name,buf)?'正在讀取 DWG…':'正在讀取檔案…');
+  await tick();
+  try{
+    const {d,msg}=await parseFile(name,buf);
+    /* 開新圖檔：外部參考清單跟著換；復原記錄不跨圖檔 */
+    const xs=d.xstate&&Array.isArray(d.xstate.ents)?d.xstate:{xrefs:d.xrefs||[],ents:[],layers:{}};
+    delete d.xstate; delete d.xrefs;
+    let baseNote='';
+    if(d.ents.length>BASE_LIMIT){
+      const bname='底圖：'+(baseName(name)||'原圖');
+      for(const e of d.ents){ e.ln=(d.layers[e.layer]||d.layers[0]).name; e.xref=bname; delete e.id; }
+      xs.ents=d.ents.concat(xs.ents); d.ents=[];
+      xs.xrefs.unshift({name:bname,path:name,inserts:[],loaded:xs.ents.length,base:true});
+      baseNote=`；圖面很大，原圖以唯讀底圖開啟（可在上面繪製、鎖點；要修改原圖物件請到「外部參考」按「併入」）`;
+    }
+    doc=d; XS=xs; XSV++; XI=null; undoStack=[]; redoStack=[]; relinkX(); save(); saveXS(); warmIndex();
+    sel.clear(); setTool('select'); if($('#dMenu').open) $('#dMenu').close(); zoomExtents(true);
+    const miss=XS.xrefs.filter(x=>!x.base&&!x.loaded&&x.inserts.length).length, nx=XS.xrefs.filter(x=>!x.base).length;
+    toast('已匯入 '+msg.replace(/^已匯入 /,'')+baseNote+(nx?`；含 ${nx} 個外部參考${miss?'，可從選單「外部參考」載入':''}`:''),8000);
+  }catch(err){toast('無法讀取這個檔案：'+err.message,7000);}
+  finally{ progressCb=null; }
+}
+
+/* ---------- 外部參考 ----------
+   參考檔的物件放在 XS.ents（唯讀疊圖），不進入復原記錄，數十萬個物件也不會拖慢每一步編輯。
+   可顯示、鎖點、隱藏圖層；要編輯時用「併入圖面」轉成一般物件。 */
+const baseName=p=>String(p||'').split(/[\\/]/).pop().replace(/\.(dwg|dxf)$/i,'');
+/* 依圖層名稱重新對應 XS.ents 的圖層索引（復原／刪圖層會改變 doc.layers） */
+function relinkX(){
+  const li=new Map(doc.layers.map((l,i)=>[l.name,i]));
+  for(const [n,def] of Object.entries(XS.layers||{})) if(!li.has(n)){ li.set(n,doc.layers.length); doc.layers.push({name:n,color:def.color||'auto',on:def.on!==false}); }
+  for(const e of XS.ents){ const i=li.get(e.ln); e.layer=i===undefined?0:i; }
+}
+let xsTimer=0;
+function saveXS(){ clearTimeout(xsTimer); xsTimer=setTimeout(async()=>{ try{ await idbPut('xs',XS); }catch(_){ toast('外部參考太大，這台裝置存不下；下次開啟需重新載入',6000); } },600); }
+const xrefCount=n=>{ let c=0; for(const e of XS.ents) if(e.xref===n) c++; return c; };
+async function attachXref(xname,fileName,buf){
+  const {d}=await parseFile(fileName,buf);
+  let X=XS.xrefs.find(x=>x.name===xname);
+  if(!X){ X={name:xname,path:fileName,inserts:[{M:[1,0,0,1,0,0],layer:(doc.layers[doc.cur]||doc.layers[0]).name}],loaded:0}; XS.xrefs.push(X); }
+  XS.ents=XS.ents.filter(e=>e.xref!==xname);
+  for(const o of XS.xrefs) o.inserts=o.inserts.filter(i=>i.from!==xname);
+  let added=0;
+  for(const ins of X.inserts){
+    for(const e of d.ents){
+      const src=d.layers[e.layer]||{name:'0',color:'auto',on:true}, fromZero=src.name==='0';
+      const ln=fromZero?ins.layer:xname+'|'+src.name;
+      if(!fromZero&&!XS.layers[ln]) XS.layers[ln]={color:src.color,on:src.on!==false};
+      if(fromZero&&!XS.layers[ln]&&!doc.layers.some(l=>l.name===ln)) XS.layers[ln]={color:'auto',on:true};
+      let o=mapEnt(e,ins.M); if(o===e) o=JSON.parse(JSON.stringify(e));
+      delete o.id; o.ln=ln; o.xref=xname;
+      const col=e.color||(fromZero?ins.color:undefined); if(col) o.color=col; else delete o.color;
+      XS.ents.push(o); added++;
+    }
+    /* 巢狀外部參考：插入矩陣串接上層，等使用者再載入 */
+    for(const nx of (d.xrefs||[])){
+      let N=XS.xrefs.find(x=>x.name===nx.name); if(!N){ N={name:nx.name,path:nx.path,inserts:[],loaded:0}; XS.xrefs.push(N); }
+      for(const ni of nx.inserts) N.inserts.push({M:mmul(ins.M,ni.M),layer:ni.layer==='0'?ins.layer:xname+'|'+ni.layer,color:ni.color||(ni.layer==='0'?ins.color:undefined),from:xname});
+    }
+  }
+  X.loaded=added; X.file=fileName; XSV++; XI=null; warmIndex();
+  relinkX(); save(); saveXS(); refreshUI();
+  return {added,nested:(d.xrefs||[]).length};
+}
+function unloadXref(xname){
+  XS.ents=XS.ents.filter(e=>e.xref!==xname); XSV++; XI=null;
+  const X=XS.xrefs.find(x=>x.name===xname); if(X){ if(X.base) XS.xrefs=XS.xrefs.filter(x=>x!==X); else {X.loaded=0; delete X.file;} }
+  saveXS(); renderXref(); refreshUI(); toast(`已卸載「${xname}」`);
+}
+/* 併入圖面：把參考物件轉成可編輯的一般物件（可復原） */
+let bindArm=null;
+function bindXref(xname){
+  const part=XS.ents.filter(e=>e.xref===xname); if(!part.length) return;
+  if(part.length>50000&&bindArm!==xname){ bindArm=xname; setTimeout(()=>{ if(bindArm===xname) bindArm=null; },5000);
+    toast(`「${xname}」有 ${part.length} 個物件，併入後每一步編輯都會變慢；5 秒內再按一次「併入」確認`,5000); return; }
+  bindArm=null;
+  edit(()=>{ for(const e of part){ const o=JSON.parse(JSON.stringify(e)); delete o.xref; delete o.ln; o.id=doc.nextId++; doc.ents.push(o); } });
+  XS.ents=XS.ents.filter(e=>e.xref!==xname); XS.xrefs=XS.xrefs.filter(x=>x.name!==xname); XSV++; XI=null;
+  saveXS(); renderXref(); refreshUI(); toast(`已將「${xname}」的 ${part.length} 個物件併入圖面，可以編輯`,4000);
+}
+let xTarget=null;
+/* 依檔名配對外部參考；用個別「選檔」時直接指定給該參考 */
+async function loadXrefFiles(files,target){
+  const list=[...files]; if(!list.length) return;
+  let ok=0, done=0; const miss=[];
+  const findX=nm=>{ const key=baseName(nm).toLowerCase(); return target?XS.xrefs.find(x=>x.name===target):XS.xrefs.find(x=>!x.base&&(x.name.toLowerCase()===key||baseName(x.path).toLowerCase()===key)); };
+  const loadOne=async(f)=>{ const nm=f.name||''; const X=findX(nm); const name=X?X.name:(target||baseName(nm)||'外部參考');
+    done++; toast(`正在載入「${name}」…（${done}/${list.length}）`,60000); await tick();
+    try{ const buf=await f.arrayBuffer(); await attachXref(name,nm,buf); ok++; }
+    catch(err){ toast(`「${name}」載入失敗：${err.message}`,6000); await new Promise(r=>setTimeout(r,1500)); }
+    renderXref(); };
+  /* 依相依順序：先載入已有插入位置的參考；上層載入後，巢狀參考才有插入位置，再接著載入 */
+  let pending=list.filter(f=>{ if(findX(f.name||'')||target!==undefined) return true; miss.push(f.name||''); return false; });
+  for(let progress=true;pending.length&&progress;){
+    progress=false;
+    for(const f of [...pending]){ const X=findX(f.name||''); if(target!==undefined&&!X||X&&X.inserts.length){ pending=pending.filter(p=>p!==f); await loadOne(f); progress=true; } }
+  }
+  for(const f of pending) miss.push((f.name||'')+'（沒有上層參考插入它）');
+  const still=XS.xrefs.filter(x=>!x.loaded&&x.inserts.length).length;
+  toast(`已載入 ${ok} 個外部參考`+(miss.length?`；${miss.length} 個檔案未載入（${miss.slice(0,3).join('、')}）：檔名對不到參考名稱時，可用該參考的「選檔」指定`:'')+(still?`；還有 ${still} 個未載入`:''),7000);
+  renderXref();
+}
+function renderXref(){
+  const box=$('#xList'); if(!box) return; const X=XS.xrefs;
+  $('#xNote').textContent=X.length?`這張圖有 ${X.length} 個外部參考，共 ${XS.ents.length} 個參考物件已載入。可一次選取多個 DWG／DXF，會依檔名自動配對。`:'這張圖沒有外部參考。可用「附加其他圖檔」把另一張圖疊到目前圖面的原點。';
+  box.innerHTML='';
+  for(const x of X){
+    const row=document.createElement('div'); row.className='xrow';
+    const st=x.base?`唯讀底圖・${x.loaded} 個物件`:x.loaded?`已載入 ${x.loaded} 個物件`:(x.inserts.length?'未載入':'等待上層參考載入');
+    row.innerHTML=`<div class="xinfo"><b>${esc(x.name)}</b><span class="xst ${x.loaded?'ok':(x.inserts.length?'miss':'')}">${st}${x.base?'':`・插入 ${x.inserts.length} 處`}</span><small>${esc(x.path||x.file||'')}</small></div><div class="xbtns"></div>`;
+    const bx=row.querySelector('.xbtns');
+    const B=(t,fn)=>{const b=document.createElement('button'); b.textContent=t; b.addEventListener('click',fn); bx.appendChild(b);};
+    if(!x.base) B(x.loaded?'重新選檔':'選檔',()=>{ xTarget=x.name; $('#xOne').click(); });
+    if(x.loaded){ B('併入',()=>bindXref(x.name)); B(x.base?'關閉底圖':'卸載',()=>unloadXref(x.name)); }
+    box.appendChild(row);
+  }
+}
+function openXref(){ if($('#dMenu').open) $('#dMenu').close(); renderXref(); $('#dXref').showModal(); }
+$('#mXref').addEventListener('click',openXref);
+$('#xFiles').addEventListener('change',ev=>{ const fs=ev.target.files; loadXrefFiles(fs,undefined).finally(()=>{ev.target.value='';}); });
+$('#xOne').addEventListener('change',ev=>{ const fs=ev.target.files; const t=xTarget; xTarget=null; loadXrefFiles(fs,t).finally(()=>{ev.target.value='';}); });
+$('#xAttach').addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f){return;} const nm=baseName(f.name)||'外部參考';
+  loadXrefFiles([f],XS.xrefs.some(x=>x.name===nm)?nm+'-'+Date.now()%1000:nm).finally(()=>{ev.target.value='';}); });
+$('#mFile').addEventListener('change',ev=>{
+  const f=ev.target.files[0]; if(!f) return; const rd=new FileReader();
+  rd.onload=()=>{ importBuffer(f.name||'',rd.result); ev.target.value=''; };
+  rd.onerror=()=>toast('無法讀取這個檔案');
+  rd.readAsArrayBuffer(f);
+});
+/* 從手機檔案管理員「開啟方式」選掌上製圖時，App 會呼叫這裡 */
+window.cadOpenPending=()=>{ if(!NATIVE) return; const b64=NATIVE.takePendingFile(); if(!b64) return;
+  const bin=atob(b64), u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+  importBuffer(NATIVE.pendingName()||'',u8.buffer); };
+/* Android 返回鍵：先關面板、再取消指令，最後才離開 App */
+window.cadBack=()=>{ const dl=document.querySelector('dialog[open]'); if(dl){dl.close(); return true;}
+  if(document.activeElement===$('#cmdIn')){ $('#cmdIn').blur(); return true; }
+  if(T.id!=='select'||sel.size||boxStart){ cancel(); return true; } return false; };
+$('#mSample').addEventListener('click',()=>{edit(()=>{doc=sampleDoc();}); XS={xrefs:[],ents:[],layers:{}}; XSV++; XI=null; saveXS(); sel.clear(); setTool('select'); $('#dMenu').close(); zoomExtents(true); toast('已載入範例圖面，可按復原回到原本的圖');});
+let newArm=0;
+$('#mNew').addEventListener('click',e=>{
+  const b=e.currentTarget;
+  if(!newArm){b.textContent='再點一次確認清除（可復原）'; newArm=setTimeout(()=>{newArm=0;b.textContent='清除並開新圖面';},3000); return;}
+  clearTimeout(newArm); newArm=0; b.textContent='清除並開新圖面';
+  edit(()=>{doc=blankDoc();}); XS={xrefs:[],ents:[],layers:{}}; XSV++; XI=null; saveXS(); sel.clear(); setTool('select'); $('#dMenu').close(); zoomExtents(true); toast('已開新圖面');
+});
+$('#sTextH').addEventListener('change',e=>{const v=parseFloat(e.target.value); if(v>0){doc.textH=v; save(); refreshUI();} else e.target.value=doc.textH;});
+$('#sDec').addEventListener('change',e=>{doc.dec=+e.target.value; save(); refreshUI();});
+
+/* ---------- 綁定 ---------- */
+document.querySelectorAll('dialog [data-close]').forEach(b=>b.addEventListener('click',()=>b.closest('dialog').close()));
+document.querySelectorAll('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d) d.close();}));
+$('#bUndo').addEventListener('click',undo); $('#bRedo').addEventListener('click',redo);
+$('#bExt').addEventListener('click',()=>zoomExtents());
+$('#bLayer').addEventListener('click',openLayers);
+$('#bMenu').addEventListener('click',()=>{$('#sTextH').value=doc.textH; $('#sDec').value=String(doc.dec??2); $('#dMenu').showModal();});
+$('#lAdd').addEventListener('click',()=>{edit(()=>{const n=doc.layers.length; doc.layers.push({name:'圖層'+n,color:PAL[(n-1)%PAL.length],on:true}); doc.cur=n;}); renderLayers();});
+$('#lMove').addEventListener('click',()=>{moveToLayer(); renderLayers();});
+const chip=(id,key,label)=>$(id).addEventListener('click',()=>{settings[key]=!settings[key]; saveSettings(); refreshUI(); toast(`${label}：${settings[key]?'開':'關'}`,1200);});
+chip('#cSnap','osnap','物件鎖點'); chip('#cGrid','grid','格點鎖點'); chip('#cOrtho','ortho','正交'); chip('#cOff','offset','偏移準星');
+const cmdIn=$('#cmdIn');
+function submitCmd(){const v=cmdIn.value; cmdIn.value=''; parseInput(v); if(T.phase!=='txt'&&!matchMedia('(pointer:fine)').matches) cmdIn.blur();}
+$('#bGo').addEventListener('click',submitCmd);
+cmdIn.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){e.preventDefault(); submitCmd();}
+  else if(e.key==='Escape'){cmdIn.value=''; cmdIn.blur(); cancel();}
+  else if(e.key===' '&&T.phase!=='txt'){e.preventDefault(); submitCmd();}
+});
+document.addEventListener('keydown',e=>{
+  if(document.querySelector('dialog[open]')) return;
+  if(e.target===cmdIn) return;
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA') return;
+  const k=e.key;
+  if((e.ctrlKey||e.metaKey)&&k.toLowerCase()==='z'){e.preventDefault(); e.shiftKey?redo():undo(); return;}
+  if((e.ctrlKey||e.metaKey)&&k.toLowerCase()==='y'){e.preventDefault(); redo(); return;}
+  if(k==='Escape'){cancel(); return;}
+  if(k==='Enter'){finish(); return;}
+  if(k==='Delete'||k==='Backspace'){ if(sel.size){e.preventDefault(); doErase();} return; }
+  if(k==='F3'){e.preventDefault(); $('#cSnap').click(); return;}
+  if(k==='F8'){e.preventDefault(); $('#cOrtho').click(); return;}
+  if(k==='F9'){e.preventDefault(); $('#cGrid').click(); return;}
+  if(k===' '){ if(!spaceDown){spaceDown=true;} e.preventDefault(); return; }
+  if(k.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey) cmdIn.focus();
+});
+document.addEventListener('keyup',e=>{if(e.key===' ') spaceDown=false;});
+
+function resize(){
+  const r=$('#stage').getBoundingClientRect(); DPR=window.devicePixelRatio||1; W=r.width; H=r.height;
+  cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR); render();
+}
+const retheme=()=>{readTheme(); refreshUI(); render();};
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',retheme);
+new MutationObserver(retheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+doc=blankDoc();
+readTheme(); buildTools();
+let loaded=false, needFit=true;
+new ResizeObserver(()=>{resize(); if(loaded&&needFit&&W>0){needFit=false; zoomExtents(true);}}).observe($('#stage'));
+refreshUI();
+load().then(fresh=>{ loaded=true; refreshUI(); if(W>0){needFit=false; zoomExtents(true);}
+  if(fresh) setTimeout(()=>toast('已載入範例圖面，選單中可開新圖面',3500),400); });
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>requestRender());
+})();
+</script>
+<script>
+/* 離線快取：第一次開啟後，沒有網路也能使用；並請瀏覽器保留本機儲存的圖面 */
+if('serviceWorker' in navigator&&location.protocol==='https:'||location.hostname==='localhost'){
+  navigator.serviceWorker&&navigator.serviceWorker.register('sw.js').catch(function(){});
+}
+if(navigator.storage&&navigator.storage.persist){ navigator.storage.persist().catch(function(){}); }
+</script></html>

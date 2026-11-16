@@ -1,0 +1,17 @@
+{
+  "name": "掌上製圖",
+  "short_name": "掌上製圖",
+  "description": "手機用的 2D 製圖程式，可開啟 DWG／DXF、外部參考，離線使用",
+  "lang": "zh-Hant",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1d242a",
+  "theme_color": "#1d242a",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
